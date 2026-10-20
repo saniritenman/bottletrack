@@ -4,6 +4,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -28,10 +29,43 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
+      - name: Find previous successful Pages build
+        id: previous
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy.yml',
+              status: 'success',
+              per_page: 20,
+            });
+            const previous = data.workflow_runs.find(run => run.id !== context.runId);
+            core.setOutput('run-id', previous?.id ?? '');
+      - name: Download previous Pages build
+        if: steps.previous.outputs.run-id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: previous-pages
+          run-id: ${{ steps.previous.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Keep previous hashed assets available for cached pages
+        run: |
+          if [ -f previous-pages/artifact.tar ]; then
+            mkdir -p previous-site
+            tar -xf previous-pages/artifact.tar -C previous-site
+            if [ -d previous-site/assets ]; then
+              cp -n previous-site/assets/* dist/assets/ 2>/dev/null || true
+            fi
+          fi
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
+          retention-days: 7
   deploy:
     environment:
       name: github-pages
