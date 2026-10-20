@@ -8,7 +8,7 @@ GitHub Pages hosts the app but does not store its data. To share one inventory b
 
 1. Create a Supabase project and open its **SQL Editor**.
 2. Run the SQL in [`supabase-setup.sql`](supabase-setup.sql).
-3. Copy the project URL and its public anon/publishable key. Add them as GitHub repository **Actions secrets** named `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+3. Copy the project URL and its public publishable key. Add them as GitHub repository **Actions secrets** named `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
 4. Push to `main` to redeploy the Pages site. For local development, copy `.env.example` to `.env.local` and fill the same values.
 5. Before connecting, export a JSON backup from the browser that currently holds your products. The first configured browser will seed the shared inventory if the shared table is empty. Import the backup afterward if needed.
 
@@ -39,3 +39,4 @@ The included GitHub Actions workflow builds the Vite app and deploys `dist/` to 
 ## Backups
 
 Use **Export JSON** to download the current inventory. **Import JSON** replaces the shared inventory when shared storage is configured, or the local browser inventory otherwise. Keep a copy of the backup before importing.
+

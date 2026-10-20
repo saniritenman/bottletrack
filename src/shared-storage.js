@@ -1,10 +1,10 @@
 const endpoint = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-const publicKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const publicKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const sharedStorageEnabled = Boolean(endpoint && publicKey);
 
 function requestHeaders(extra = {}) {
-  return { apikey: publicKey, Authorization: `Bearer ${publicKey}`, 'Content-Type': 'application/json', ...extra };
+  return { apikey: publicKey, 'Content-Type': 'application/json', ...extra };
 }
 
 export async function fetchSharedDatabase() {
