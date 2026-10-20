@@ -29,7 +29,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
-      - name: Find previous successful Pages build
+      - name: Find recent successful Pages builds
         id: previous
         uses: actions/github-script@v7
         with:
@@ -39,33 +39,38 @@ jobs:
               repo: context.repo.repo,
               workflow_id: 'deploy.yml',
               status: 'success',
-              per_page: 20,
+              branch: 'main',
+              per_page: 30,
             });
-            const previous = data.workflow_runs.find(run => run.id !== context.runId);
-            core.setOutput('run-id', previous?.id ?? '');
-      - name: Download previous Pages build
-        if: steps.previous.outputs.run-id != ''
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: github-pages
-          path: previous-pages
-          run-id: ${{ steps.previous.outputs.run-id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Keep previous hashed assets available for cached pages
+            const previous = data.workflow_runs
+              .filter(run => String(run.id) !== String(context.runId) && run.head_branch === 'main')
+              .slice(0, 20)
+              .map(run => run.id);
+            core.setOutput('run-ids', JSON.stringify(previous));
+      - name: Download recent Pages artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIOUS_RUN_IDS: ${{ steps.previous.outputs.run-ids }}
         run: |
-          if [ -f previous-pages/artifact.tar ]; then
-            mkdir -p previous-site
-            tar -xf previous-pages/artifact.tar -C previous-site
+          mkdir -p previous-pages
+          for run_id in $(echo "$PREVIOUS_RUN_IDS" | jq -r '.[]'); do
+            gh run download "$run_id" --name github-pages --dir "previous-pages/$run_id" || true
+          done
+      - name: Keep older assets available for cached pages
+        run: |
+          mkdir -p previous-site
+          for artifact in previous-pages/*/artifact.tar; do
+            [ -f "$artifact" ] || continue
+            tar -xf "$artifact" -C previous-site
             if [ -d previous-site/assets ]; then
               cp -n previous-site/assets/* dist/assets/ 2>/dev/null || true
             fi
-          fi
+          done
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
-          retention-days: 7
+          retention-days: 90
   deploy:
     environment:
       name: github-pages
