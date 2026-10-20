@@ -1,6 +1,6 @@
 # BottleTrack
 
-A mobile-first inventory app for tracking bottle barcodes, expiry dates, photos, and batches. The interface supports Hebrew (RTL), English, and Russian.
+A mobile-first inventory app for tracking bottle barcodes, expiry dates, and photos. The interface supports Hebrew (RTL), English, and Russian.
 
 ## Shared inventory setup
 
