@@ -135,7 +135,7 @@ function App(){
   const [cameraOn,setCameraOn]=useState(false);
   const [form,setForm]=useState(null);
   const [lotForm,setLotForm]=useState({expiry:'',price:'',note:''});
-  const videoRef=useRef(null), streamRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false);
+  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false);
   const t=messages[lang]||messages.en, rtl=lang==='he';
   useEffect(()=>{ localStorage.setItem(STORAGE_KEY,JSON.stringify(db)); },[db]);
   useEffect(()=>{localStorage.setItem(LANG_KEY,lang); document.documentElement.lang=lang;document.documentElement.dir=rtl?'rtl':'ltr';},[lang,rtl]);
@@ -153,22 +153,31 @@ function App(){
   const expiredCount=products.reduce((n,p)=>n+(p.lots||[]).filter(l=>l.expiry&&statusFor(l.expiry)==='expired').length,0);
   const log=(type,product,detail='')=>setDb(prev=>({...prev,activity:[{id:uid(),type,product:product?.name||'',barcode:product?.barcode||'',detail,at:new Date().toISOString()},...(prev.activity||[])].slice(0,100)}));
   const notify=s=>setToast(s);
-  function stopCamera(){scanLoop.current=false;if(streamRef.current){streamRef.current.getTracks().forEach(x=>x.stop());streamRef.current=null;}setCameraOn(false);}
+  function stopCamera(){
+    scanLoop.current=false;
+    scannerControlsRef.current?.stop();
+    scannerControlsRef.current=null;
+    setCameraOn(false);
+  }
   async function startCamera(){
     setScanError('');
     if(!navigator.mediaDevices?.getUserMedia){setScanError(t.cameraError);return;}
-    if(!('BarcodeDetector' in window)){setScanError(t.scanUnsupported);return;}
     try{
-      const supported=await window.BarcodeDetector.getSupportedFormats();
-      const formats=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code'].filter(x=>supported.includes(x));
-      const detector=new window.BarcodeDetector({formats});
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
-      streamRef.current=stream;setCameraOn(true);scanLoop.current=true;
-      setTimeout(async()=>{
-        if(videoRef.current){videoRef.current.srcObject=stream;try{await videoRef.current.play()}catch{}}
-        const loop=async()=>{if(!scanLoop.current||!videoRef.current)return;try{const hits=await detector.detect(videoRef.current);if(hits.length&&hits[0].rawValue){setScanValue(hits[0].rawValue);stopCamera();return;}}catch{} requestAnimationFrame(loop);};
-        requestAnimationFrame(loop);
-      },100);
+      scanLoop.current=true;
+      setCameraOn(true);
+      await new Promise(resolve=>requestAnimationFrame(resolve));
+      const video=videoRef.current;
+      if(!video)throw new Error('Scanner preview is unavailable.');
+      const {BrowserMultiFormatReader}=await import('@zxing/browser');
+      const reader=new BrowserMultiFormatReader();
+      const controls=await reader.decodeFromVideoDevice(undefined,video,(result,_error,activeControls)=>{
+        if(!result||!scanLoop.current)return;
+        scannerControlsRef.current=activeControls;
+        setScanValue(result.getText());
+        stopCamera();
+      });
+      if(scanLoop.current)scannerControlsRef.current=controls;
+      else controls.stop();
     }catch{setScanError(t.cameraError);stopCamera();}
   }
   function openScanner(){setScanValue('');setScanError('');setModal('scanner');}
