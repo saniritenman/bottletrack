@@ -70,3 +70,10 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 @media (display-mode:standalone){.topbar{height:calc(76px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top)}}
 @media (display-mode:standalone) and (max-width:850px){.topbar{height:calc(65px + env(safe-area-inset-top))}}
 @media (display-mode:standalone) and (max-width:600px){.topbar{height:calc(62px + env(safe-area-inset-top))}}
+.topbar-home{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;padding:0 8px 0 0;border:0;background:transparent;color:#173c2a;text-align:start}
+.topbar-home .brand-mark{width:36px;height:36px;border-radius:11px;flex:0 0 36px}
+.topbar-home strong{font-size:15px;letter-spacing:-.35px}
+.topbar-home:hover strong{text-decoration:underline;text-underline-offset:3px}
+.top-add{min-height:46px;padding:12px 20px;font-size:14px;gap:9px}
+@media(max-width:850px){.topbar-home strong{font-size:14px}.top-add{font-size:13px;padding:11px 16px}}
+@media(max-width:600px){.breadcrumb{display:none}.topbar-home{padding:0}.topbar-home .brand-mark{width:34px;height:34px;flex-basis:34px}.topbar-home strong{display:none}.top-add{min-height:42px;padding:10px 12px;font-size:12px;gap:6px}}
