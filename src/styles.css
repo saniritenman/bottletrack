@@ -85,3 +85,6 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 .top-actions{grid-area:actions;justify-self:end}
 .breadcrumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:1120px){.storage-label{display:none}.install-button{width:40px;padding:0}.install-button span{display:none}}
+.metric-icon-window{position:relative}
+.metric-icon-window span{position:absolute;inset-inline-end:-5px;bottom:-4px;display:grid;place-items:center;min-width:17px;height:14px;padding:0 3px;border:2px solid #fff;border-radius:8px;background:#a66b0f;color:#fff;font-size:7px;font-weight:800;line-height:1}
+.metric-window-label{color:#9b6a21!important;font-weight:700}

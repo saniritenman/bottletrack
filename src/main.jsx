@@ -52,7 +52,7 @@ const messages = {
     currentStock:'Current stock', deleteDateEntry:'Remove date entry', sureDateEntry:'Remove this expiration entry?',
     date:'Date', source:'Entry', newProduct:'New product', editProduct:'Edit product', productCatalog:'Product catalog',
     expirySummary:'Expiration overview', noMatches:'No products match these filters.', languageChanged:'Language',
-    installApp:'Add to device', installHelpTitle:'Add BottleTrack to your device', installHelp:'On iPhone or iPad: tap Share, then choose “Add to Home Screen”. On Android: open your browser menu and choose “Install app” or “Add to Home screen”.'
+    installApp:'Add to device', installHelpTitle:'Add BottleTrack to your device', installHelp:'On iPhone or iPad: tap Share, then choose “Add to Home Screen”. On Android: open your browser menu and choose “Install app” or “Add to Home screen”.', within30Days:'≤ 30 days'
   },
   he: {
     app:'BottleTrack', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
@@ -90,7 +90,7 @@ const messages = {
     currentStock:'מלאי נוכחי', deleteDateEntry:'הסרת תאריך', sureDateEntry:'להסיר את רישום התפוגה הזה?',
     date:'תאריך', source:'רישום', newProduct:'מוצר חדש', editProduct:'עריכת מוצר', productCatalog:'קטלוג מוצרים',
     expirySummary:'סקירת תפוגות', noMatches:'אין מוצרים התואמים לסינון.', languageChanged:'שפה',
-    installApp:'הוספה למכשיר', installHelpTitle:'הוספת BottleTrack למכשיר', installHelp:'ב-iPhone או iPad: הקישו על שיתוף ואז על „הוספה למסך הבית”. ב-Android: פתחו את תפריט הדפדפן ובחרו „התקנת אפליקציה” או „הוספה למסך הבית”.'
+    installApp:'הוספה למכשיר', installHelpTitle:'הוספת BottleTrack למכשיר', installHelp:'ב-iPhone או iPad: הקישו על שיתוף ואז על „הוספה למסך הבית”. ב-Android: פתחו את תפריט הדפדפן ובחרו „התקנת אפליקציה” או „הוספה למסך הבית”.', within30Days:'עד 30 יום'
   },
   ru: {
     app:'BottleTrack', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
@@ -128,7 +128,7 @@ const messages = {
     currentStock:'Текущий запас', deleteDateEntry:'Удалить запись даты', sureDateEntry:'Удалить эту запись срока годности?',
     date:'Дата', source:'Запись', newProduct:'Новый товар', editProduct:'Изменить товар', productCatalog:'Каталог товаров',
     expirySummary:'Обзор сроков годности', noMatches:'Нет товаров, соответствующих фильтрам.', languageChanged:'Язык',
-    installApp:'На устройство', installHelpTitle:'Добавить BottleTrack на устройство', installHelp:'На iPhone или iPad: нажмите «Поделиться», затем «На экран Домой». На Android: откройте меню браузера и выберите «Установить приложение» или «Добавить на главный экран».'
+    installApp:'На устройство', installHelpTitle:'Добавить BottleTrack на устройство', installHelp:'На iPhone или iPad: нажмите «Поделиться», затем «На экран Домой». На Android: откройте меню браузера и выберите «Установить приложение» или «Добавить на главный экран».', within30Days:'≤ 30 дней'
   }
 };
 const uid = () => (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -347,7 +347,7 @@ function App(){
         <div className="page-heading"><div><div className="eyebrow">{t.overview}</div><h1>{t.inventory}</h1><p>{t.tagline}</p></div></div>
         <div className="metric-grid">
           <button type="button" className={`metric ${filter==='all'?'metric-active':''}`} onClick={()=>selectMetricFilter('all')} aria-pressed={filter==='all'}><div className="metric-top"><span>{t.tracked}</span><div className="metric-icon green"><Package size={18}/></div></div><strong>{products.length}</strong><small>{t.productsCount}</small></button>
-          <button type="button" className={`metric ${filter==='soon'?'metric-active':''}`} onClick={()=>selectMetricFilter('soon')} aria-pressed={filter==='soon'}><div className="metric-top"><span>{t.expiring}</span><div className="metric-icon amber"><Clock3 size={18}/></div></div><strong>{soonCount}</strong><small>{t.soon}</small></button>
+          <button type="button" className={`metric ${filter==='soon'?'metric-active':''}`} onClick={()=>selectMetricFilter('soon')} aria-pressed={filter==='soon'}><div className="metric-top"><span>{t.expiring}</span><div className="metric-icon amber metric-icon-window"><Clock3 size={18}/><span>30</span></div></div><strong>{soonCount}</strong><small className="metric-window-label">{t.within30Days}</small></button>
           <button type="button" className={`metric ${filter==='expired'?'metric-active':''}`} onClick={()=>selectMetricFilter('expired')} aria-pressed={filter==='expired'}><div className="metric-top"><span>{t.expired}</span><div className="metric-icon red"><AlertTriangle size={18}/></div></div><strong>{expiredCount}</strong><small>{t.overdue}</small></button>
         </div>
         <section className="inventory-panel">
