@@ -82,6 +82,6 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 .topbar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"context home actions";justify-content:initial;gap:10px}
 .topbar-context{grid-area:context;justify-self:start;overflow:hidden}
 .topbar-home{grid-area:home;justify-self:center;padding:0}
-.top-actions{grid-area:actions;justify-self:start}
+.top-actions{grid-area:actions;justify-self:end}
 .breadcrumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:1120px){.storage-label{display:none}.install-button{width:40px;padding:0}.install-button span{display:none}}
