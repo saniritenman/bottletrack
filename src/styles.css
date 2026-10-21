@@ -74,6 +74,8 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 .topbar-home .brand-mark{width:36px;height:36px;border-radius:11px;flex:0 0 36px}
 .topbar-home strong{font-size:15px;letter-spacing:-.35px}
 .topbar-home:hover strong{text-decoration:underline;text-underline-offset:3px}
+.topbar-context{display:flex;align-items:center;gap:22px;min-width:0}
+.top-actions{flex:0 0 auto}
 .top-add{min-height:46px;padding:12px 20px;font-size:14px;gap:9px}
-@media(max-width:850px){.topbar-home strong{font-size:14px}.top-add{font-size:13px;padding:11px 16px}}
+@media(max-width:850px){.topbar-context{gap:12px}.breadcrumb{margin-inline-end:0}.topbar-home strong{font-size:14px}.top-add{font-size:13px;padding:11px 16px}}
 @media(max-width:600px){.breadcrumb{display:none}.topbar-home{padding:0}.topbar-home .brand-mark{width:34px;height:34px;flex-basis:34px}.topbar-home strong{display:none}.top-add{min-height:42px;padding:10px 12px;font-size:12px;gap:6px}}
