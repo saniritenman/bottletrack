@@ -1,24 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#2678d8"/>
-      <stop offset="1" stop-color="#123b78"/>
+    <linearGradient id="night" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#193c68"/>
+      <stop offset="1" stop-color="#101f3b"/>
     </linearGradient>
-    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
-      <stop stop-color="#fff"/>
-      <stop offset="1" stop-color="#d8eeff"/>
+    <linearGradient id="spirit" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f5c56c"/>
+      <stop offset=".48" stop-color="#c98137"/>
+      <stop offset="1" stop-color="#9a5527"/>
+    </linearGradient>
+    <linearGradient id="foil" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffe6a0"/>
+      <stop offset="1" stop-color="#c78735"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
-  <circle cx="395" cy="116" r="55" fill="#61d6ed" opacity=".18"/>
-  <path d="M171 87h74v54l28 32c12 14 18 31 18 49v174c0 28-22 50-50 50h-66c-28 0-50-22-50-50V222c0-18 6-35 18-49l28-32V87Z" fill="url(#glass)"/>
-  <path d="M171 273c22-13 43 12 65 0 19-10 37-9 55-1v124c0 28-22 50-50 50h-66c-28 0-50-22-50-50V289c19 1 32-7 46-16Z" fill="#48c4e5"/>
-  <path d="M171 87h74v39h-74z" rx="10" fill="#bde9ff"/>
-  <path d="M134 229c28-13 55 14 82 2 19-9 37-8 54-1" fill="none" stroke="#1761a9" stroke-linecap="round" stroke-width="12"/>
-  <rect x="300" y="245" width="145" height="151" rx="22" fill="#fff"/>
-  <path d="M300 267c0-12 10-22 22-22h101c12 0 22 10 22 22v27H300v-27Z" fill="#76d5ed"/>
-  <path d="M333 237v22m78-22v22" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
-  <path d="M321 316v49m12-49v49m14-49v49m9-49v49m18-49v49m11-49v49m15-49v49m10-49v49m17-49v49" stroke="#175b9d" stroke-width="7" stroke-linecap="round"/>
-  <circle cx="421" cy="366" r="37" fill="#2678d8" stroke="#fff" stroke-width="8"/>
-  <path d="m421 343 6 15 15 6-15 6-6 15-6-15-15-6 15-6 6-15Z" fill="#fff"/>
+  <rect width="512" height="512" rx="118" fill="url(#night)"/>
+  <circle cx="256" cy="256" r="204" fill="#fff" opacity=".035"/>
+  <path d="M206 82h100v38h-12v71l34 38c17 19 27 44 27 69v114c0 34-27 61-61 61h-76c-34 0-61-27-61-61V298c0-25 10-50 27-69l34-38v-71h-12V82Z" fill="url(#spirit)" stroke="#f6d58e" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M205 82h102v43H205z" fill="url(#foil)"/>
+  <path d="M205 145h102v32l-14 16h-74l-14-16z" fill="#18365d" opacity=".68"/>
+  <path d="M180 286c21-10 42-10 64 0 20 9 42 9 64 0 13-6 25-8 38-6v132c0 34-27 61-61 61h-76c-34 0-61-27-61-61V291c12 1 22-1 32-5Z" fill="#b96f32" opacity=".42"/>
+  <rect x="169" y="251" width="174" height="151" rx="18" fill="#fff8e8" stroke="#d39a53" stroke-width="7"/>
+  <path d="M169 269c0-10 8-18 18-18h138c10 0 18 8 18 18v22H169v-22Z" fill="#d7a24c"/>
+  <text x="256" y="281" text-anchor="middle" fill="#fff8e8" font-family="Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3">BOTTLETRACK</text>
+  <path d="M194 319v48m10-48v48m13-48v48m8-48v48m14-48v48m11-48v48m17-48v48m11-48v48m9-48v48" stroke="#18365d" stroke-width="6" stroke-linecap="round"/>
+  <rect x="302" y="315" width="25" height="31" rx="5" fill="#dff0e3" stroke="#3f875b" stroke-width="3"/>
+  <path d="M302 324h25m-18-13v9m11-9v9" stroke="#3f875b" stroke-width="3" stroke-linecap="round"/>
+  <path d="m371 134 9 23 23 9-23 9-9 23-9-23-23-9 23-9 9-23Z" fill="#f5cf7d"/>
+  <path d="M118 372h29m-15-15 15 15-15 15" fill="none" stroke="#9edcf3" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
 </svg>

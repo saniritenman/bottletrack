@@ -119,6 +119,8 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 :root[data-theme="dark"] .timeline-dot.ok{background:#58bd78;box-shadow:0 0 0 4px #203b2c}
 .lang-picker .lang-select-wrap select{background:#1b3b61!important;border:1px solid #3a5c80!important;border-radius:11px;padding-block:10px;color:#e7f2ff!important}
 :root[data-theme="dark"] .lang-picker .lang-select-wrap select{background:#203a56!important;border-color:#426184!important;color:#edf5ff!important}
+.status.status-ok{background:#e4f4e8!important;color:#267543!important;border:1px solid #cce8d4}
+:root[data-theme="dark"] .status.status-ok{background:#1e4933!important;color:#9be2b0!important;border-color:#2f6847}
 :root[data-theme="dark"] .metric-icon-window span{border-color:#19241e;background:#a66b0f;color:#fff}
 :root[data-theme="dark"] .metric-window-label{color:#edc36c!important}
 :root[data-theme="dark"] .inventory-toolbar{border-color:#2b3931}
