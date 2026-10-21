@@ -30,7 +30,7 @@ const messages = {
     days:'days', today:'Today', expiredBy:'days overdue', expiresIn:'days left', unknown:'No date',
     filter:'Filter', language:'Language', backup:'Backup / restore', export:'Export JSON',
     import:'Import JSON', importHint:'Import replaces the current data on this browser. Export a backup first.',
-    close:'Close', noHistory:'No history yet', scanTitle:'Scan a barcode', scanHint:'Point your camera at the barcode. If scanning is unavailable, enter it manually.',
+    close:'Close', noHistory:'No history yet', scanTitle:'Scan a barcode', scanHint:'Hold the barcode anywhere in the frame. Horizontal, vertical, or diagonal is fine.',
     manual:'Enter barcode manually', useBarcode:'Use barcode', cameraError:'Camera access or barcode scanning is unavailable. Check browser permissions or enter the barcode manually.', photoError:'Could not process that image. Try another photo.',
     cameraPermission:'Allow camera access to scan a bottle barcode.', confirmDelete:'Delete this product and its history?',
     delete:'Delete', productSaved:'Product saved', selectPhoto:'Choose image', required:'Please enter a product name.',
@@ -67,7 +67,7 @@ const messages = {
     days:'ימים', today:'היום', expiredBy:'ימים לאחר התפוגה', expiresIn:'ימים נותרו', unknown:'אין תאריך',
     filter:'סינון', language:'שפה', backup:'גיבוי / שחזור', export:'ייצוא JSON',
     import:'ייבוא JSON', importHint:'הייבוא מחליף את הנתונים בדפדפן הזה. מומלץ לייצא גיבוי קודם.',
-    close:'סגירה', noHistory:'אין עדיין היסטוריה', scanTitle:'סריקת ברקוד', scanHint:'כוונו את המצלמה לברקוד. אם הסריקה אינה זמינה, הזינו אותו ידנית.',
+    close:'סגירה', noHistory:'אין עדיין היסטוריה', scanTitle:'סריקת ברקוד', scanHint:'החזיקו את הברקוד בכל זווית בתוך המסגרת. אופקי, אנכי או אלכסוני — הכול מתאים.',
     manual:'הזנת ברקוד ידנית', useBarcode:'שימוש בברקוד', cameraError:'אין אפשרות להשתמש במצלמה או בסריקה. בדקו הרשאות או הזינו ברקוד ידנית.', photoError:'לא ניתן לעבד את התמונה. נסו לבחור תמונה אחרת.',
     cameraPermission:'יש לאפשר גישה למצלמה כדי לסרוק ברקוד.', confirmDelete:'למחוק את המוצר ואת ההיסטוריה שלו?',
     delete:'מחיקה', productSaved:'המוצר נשמר', selectPhoto:'בחירת תמונה', required:'נא להזין שם מוצר.',
@@ -104,7 +104,7 @@ const messages = {
     days:'дней', today:'Сегодня', expiredBy:'дн. просрочено', expiresIn:'дн. осталось', unknown:'Нет даты',
     filter:'Фильтр', language:'Язык', backup:'Резервная копия / восстановление', export:'Экспорт JSON',
     import:'Импорт JSON', importHint:'Импорт заменяет данные в этом браузере. Сначала сохраните резервную копию.',
-    close:'Закрыть', noHistory:'Истории пока нет', scanTitle:'Сканирование штрихкода', scanHint:'Наведите камеру на штрихкод. Если сканирование недоступно, введите его вручную.',
+    close:'Закрыть', noHistory:'Истории пока нет', scanTitle:'Сканирование штрихкода', scanHint:'Держите штрихкод в любой части рамки. Горизонтально, вертикально или по диагонали.',
     manual:'Ввести штрихкод вручную', useBarcode:'Использовать штрихкод', cameraError:'Камера или сканирование недоступны. Проверьте разрешения или введите штрихкод вручную.', photoError:'Не удалось обработать изображение. Попробуйте выбрать другое фото.',
     cameraPermission:'Разрешите доступ к камере для сканирования.', confirmDelete:'Удалить товар и всю его историю?',
     delete:'Удалить', productSaved:'Товар сохранён', selectPhoto:'Выбрать изображение', required:'Введите название товара.',
@@ -228,16 +228,37 @@ function App(){
       await new Promise(resolve=>requestAnimationFrame(resolve));
       const video=videoRef.current;
       if(!video)throw new Error('Scanner preview is unavailable.');
-      const {BrowserMultiFormatReader}=await import('@zxing/browser');
-      const reader=new BrowserMultiFormatReader();
-      const controls=await reader.decodeFromVideoDevice(undefined,video,(result,_error,activeControls)=>{
-        if(!result||!scanLoop.current)return;
-        scannerControlsRef.current=activeControls;
-        setScanValue(result.getText());
-        stopCamera();
-      });
-      if(scanLoop.current)scannerControlsRef.current=controls;
-      else controls.stop();
+      const [{BrowserMultiFormatReader},{DecodeHintType}]=await Promise.all([import('@zxing/browser'),import('@zxing/library')]);
+      const reader=new BrowserMultiFormatReader(new Map([[DecodeHintType.TRY_HARDER,true]]));
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+      if(!scanLoop.current){stream.getTracks().forEach(track=>track.stop());return;}
+      let scanTimer;
+      const stop=()=>{clearTimeout(scanTimer);stream.getTracks().forEach(track=>track.stop());if(video.srcObject===stream)video.srcObject=null;};
+      scannerControlsRef.current={stop};
+      video.srcObject=stream;
+      await video.play();
+      const canvas=document.createElement('canvas');
+      const angles=[0,45,90,135];
+      let angleIndex=0;
+      const scanFrame=()=>{
+        if(!scanLoop.current||!video.videoWidth)return;
+        const scale=Math.min(1,960/Math.max(video.videoWidth,video.videoHeight));
+        const width=Math.round(video.videoWidth*scale),height=Math.round(video.videoHeight*scale);
+        const angle=angles[angleIndex++%angles.length]*Math.PI/180;
+        const cos=Math.abs(Math.cos(angle)),sin=Math.abs(Math.sin(angle));
+        canvas.width=Math.ceil(width*cos+height*sin);
+        canvas.height=Math.ceil(width*sin+height*cos);
+        const context=canvas.getContext('2d');
+        context.translate(canvas.width/2,canvas.height/2);
+        context.rotate(angle);
+        context.drawImage(video,-width/2,-height/2,width,height);
+        try{
+          const result=reader.decodeFromCanvas(canvas);
+          if(result){setScanValue(result.getText());stopCamera();return;}
+        }catch{/* Keep cycling through orientations until a barcode is found. */}
+        scanTimer=window.setTimeout(scanFrame,70);
+      };
+      scanFrame();
     }catch{setScanError(t.cameraError);stopCamera();}
   }
   function openScanner(){setScanValue('');setScanError('');setModal('scanner');}
@@ -325,7 +346,7 @@ function App(){
         <div className="field full"><span>{t.photo}</span><div className="photo-upload">{form.photo&&isDisplayableProductPhoto(form.photo)?<><img src={form.photo} alt={t.productPhoto}/><div><b>{t.productPhoto}</b><button type="button" className="text-button" onClick={()=>fileRef.current?.click()}>{t.changePhoto}</button><button type="button" className="text-button danger-text" onClick={()=>setForm({...form,photo:''})}>{t.removePhoto}</button></div></>:form.photo?<><div className="upload-placeholder"><Wine size={22}/><span>{t.photoTooLarge}</span></div><div><button type="button" className="text-button" onClick={()=>fileRef.current?.click()}>{t.changePhoto}</button><button type="button" className="text-button danger-text" onClick={()=>setForm({...form,photo:''})}>{t.removePhoto}</button></div></>:<button type="button" className="upload-placeholder" onClick={()=>fileRef.current?.click()}><ImagePlus size={22}/><span>{t.selectPhoto}</span></button>}<input ref={fileRef} hidden type="file" accept="image/*" capture="environment" onChange={photoChange}/></div></div>
       </div><div className="modal-footer"><button type="button" className="button secondary" onClick={()=>setModal(null)}>{t.cancel}</button><button type="submit" className="button primary"><Save size={16}/>{form.id?t.saveChanges:t.save}</button></div></form></div></div>}
     {modal==='lot'&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setModal(null)}><div className="modal lot-modal"><div className="modal-heading"><div><div className="eyebrow">{selectedProduct?.name}</div><h2>{t.addNewDate}</h2></div><button className="icon-btn" onClick={()=>setModal(null)}><X/></button></div><form onSubmit={addLot}><label className="field"><span>{t.expiry} *</span><input required type="date" value={lotForm.expiry} onChange={e=>setLotForm({...lotForm,expiry:e.target.value})}/></label><div className="modal-footer"><button type="button" className="button secondary" onClick={()=>setModal(null)}>{t.cancel}</button><button className="button primary" type="submit"><Save size={16}/>{t.saveLot}</button></div></form></div></div>}
-    {modal==='scanner'&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&(stopCamera(),setModal(null))}><div className="modal scanner-modal"><div className="modal-heading"><div><div className="eyebrow">{t.inventory}</div><h2><ScanLine size={22}/>{t.scanTitle}</h2></div><button className="icon-btn" onClick={()=>{stopCamera();setModal(null)}}><X/></button></div><p className="modal-description">{t.scanHint}</p><div className="scanner-view">{cameraOn?<><video ref={videoRef} muted playsInline/><div className="scan-frame"><span></span></div></>:<div className="scanner-placeholder"><Camera size={36}/><span>{t.cameraPermission}</span></div>}</div>{scanError&&<div className="inline-error">{scanError}</div>}<button className="button secondary camera-button" onClick={cameraOn?stopCamera:startCamera}><Camera size={17}/>{cameraOn?t.cancel:t.scan}</button><div className="manual-entry"><label className="field"><span>{t.manual}</span><input value={scanValue} onChange={e=>setScanValue(e.target.value)} onKeyDown={e=>e.key==='Enter'&&(stopCamera(),handleBarcode(scanValue))} placeholder="7290000000000"/></label><button className="button primary" onClick={()=>{stopCamera();handleBarcode(scanValue)}}>{t.useBarcode}</button></div></div></div>}
+    {modal==='scanner'&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&(stopCamera(),setModal(null))}><div className="modal scanner-modal"><div className="modal-heading"><div><div className="eyebrow">{t.inventory}</div><h2><ScanLine size={22}/>{t.scanTitle}</h2></div><button className="icon-btn" onClick={()=>{stopCamera();setModal(null)}}><X/></button></div><p className="modal-description">{t.scanHint}</p><div className="scanner-view">{cameraOn?<><video ref={videoRef} muted playsInline/><div className="scan-frame"><span className="scan-angle"></span></div></>:<div className="scanner-placeholder"><Camera size={36}/><span>{t.cameraPermission}</span></div>}</div>{scanError&&<div className="inline-error">{scanError}</div>}<button className="button secondary camera-button" onClick={cameraOn?stopCamera:startCamera}><Camera size={17}/>{cameraOn?t.cancel:t.scan}</button><div className="manual-entry"><label className="field"><span>{t.manual}</span><input value={scanValue} onChange={e=>setScanValue(e.target.value)} onKeyDown={e=>e.key==='Enter'&&(stopCamera(),handleBarcode(scanValue))} placeholder="7290000000000"/></label><button className="button primary" onClick={()=>{stopCamera();handleBarcode(scanValue)}}>{t.useBarcode}</button></div></div></div>}
     {toast&&<div className="toast"><CheckCircle2 size={17}/>{toast}{toastUndo&&<button className="toast-undo" onClick={undoDelete}>{t.undo}</button>}</div>}
   </div>
 }

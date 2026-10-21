@@ -50,3 +50,9 @@
   .toast{white-space:normal;max-width:calc(100% - 24px);flex-wrap:wrap}
 }
 @media(max-width:380px){.modal,.form-modal,.lot-modal,.scanner-modal,.duplicate-modal{padding-inline:13px}.manual-entry{flex-direction:column}.manual-entry .button{width:100%}}
+
+/* Guide flexible barcode placement and decode rotated 1D codes. */
+.scan-frame{width:min(88%,360px);height:min(54%,260px);border-radius:18px}
+.scan-frame:before{top:50%;left:6%;right:6%;height:2px}
+.scan-frame:after{content:"";position:absolute;top:6%;bottom:6%;left:50%;width:2px;background:#b6efc5;box-shadow:0 0 8px #b6efc5}
+.scan-frame .scan-angle{position:absolute;left:8%;top:50%;width:84%;height:2px;background:#b6efc588;box-shadow:0 0 8px #b6efc5;transform:rotate(-35deg)}
