@@ -22,25 +22,25 @@
 .duplicate-summary code{font-size:12px;color:#76867c;overflow-wrap:anywhere}
 .duplicate-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .toast-undo{border:0;border-inline-start:1px solid #ffffff55;padding-inline-start:12px;background:transparent;color:#d7f0de;font:inherit;font-weight:800;text-decoration:underline;text-underline-offset:3px}
-.modal,.form-modal,.lot-modal,.scanner-modal,.duplicate-modal{width:min(100%,520px);max-height:min(88dvh,760px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.modal,.form-modal,.lot-modal,.scanner-modal,.duplicate-modal{width:min(100%,520px);max-height:min(88vh,760px);max-height:min(88dvh,760px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 .scanner-modal{width:min(100%,520px)}
 .scanner-view{height:auto;aspect-ratio:16/10;min-height:210px}
 .scan-frame{width:86%;height:90px}
 .field input,.field textarea,.field select{min-width:0}
 @media(max-width:850px){
   .modal-backdrop{padding:16px;align-items:center}
-  .modal,.form-modal,.lot-modal,.scanner-modal,.duplicate-modal{width:min(100%,540px);max-height:min(88dvh,780px);padding:22px 20px;border-radius:18px}
+  .modal,.form-modal,.lot-modal,.scanner-modal,.duplicate-modal{width:min(100%,540px);max-height:min(88vh,780px);max-height:min(88dvh,780px);padding:22px 20px;border-radius:18px}
   .scanner-modal{width:min(100%,540px)}
   .field input,.field textarea,.field select,.barcode-input input,.manual-entry input,.searchbox input,.filterbox select,.lang-picker select{font-size:16px}
-  .scanner-view{aspect-ratio:3/4;min-height:260px;max-height:44dvh}
+  .scanner-view{aspect-ratio:3/4;min-height:260px;max-height:44vh;max-height:44dvh}
   .scan-frame{width:88%;height:100px}
   .modal-footer{position:static}
 }
 @media(max-width:600px){
   .modal-backdrop{padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));align-items:center}
-  .modal,.form-modal,.lot-modal,.scanner-modal,.duplicate-modal{width:100%;max-width:500px;max-height:calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));padding:18px 16px;border-radius:18px}
+  .modal,.form-modal,.lot-modal,.scanner-modal,.duplicate-modal{width:100%;max-width:500px;max-height:calc(100vh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));max-height:calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));padding:18px 16px;border-radius:18px}
   .scanner-modal{max-width:500px}
-  .scanner-view{aspect-ratio:3/4;min-height:220px;max-height:38dvh}
+  .scanner-view{aspect-ratio:3/4;min-height:220px;max-height:38vh;max-height:38dvh}
   .manual-entry{align-items:stretch;flex-direction:row}
   .manual-entry .field{min-width:0}
   .manual-entry .button{width:auto;flex:0 0 auto}
@@ -60,3 +60,7 @@ button.metric{width:100%;font:inherit;text-align:start;color:inherit;cursor:poin
 button.metric:hover{border-color:#aac5b1;box-shadow:0 5px 16px #1d4a2d12;transform:translateY(-1px)}
 button.metric.metric-active{border-color:var(--green);box-shadow:0 0 0 2px #1e65451c}
 button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
+.install-button{min-height:40px;padding:8px 11px}
+.install-instructions{font-size:14px;line-height:1.75;color:#526458;margin:5px 0}
+.install-modal .modal-footer{margin-top:18px}
+@media(max-width:600px){.topbar{gap:6px;padding-inline:10px}.top-actions{gap:6px}.storage-dot{display:none}.breadcrumb{min-width:0;flex:1}.install-button{width:40px;padding:0}.install-button span{display:none}.top-add{padding-inline:8px;gap:5px;font-size:10px}}

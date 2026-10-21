@@ -51,7 +51,8 @@ const messages = {
     dateRequired:'Choose an expiration date.', saveChanges:'Save changes', product:'Product', optional:'Optional',
     currentStock:'Current stock', deleteDateEntry:'Remove date entry', sureDateEntry:'Remove this expiration entry?',
     date:'Date', source:'Entry', newProduct:'New product', editProduct:'Edit product', productCatalog:'Product catalog',
-    expirySummary:'Expiration overview', noMatches:'No products match these filters.', languageChanged:'Language'
+    expirySummary:'Expiration overview', noMatches:'No products match these filters.', languageChanged:'Language',
+    installApp:'Add to device', installHelpTitle:'Add BottleTrack to your device', installHelp:'On iPhone or iPad: tap Share, then choose “Add to Home Screen”. On Android: open your browser menu and choose “Install app” or “Add to Home screen”.'
   },
   he: {
     app:'BottleTrack', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
@@ -88,7 +89,8 @@ const messages = {
     dateRequired:'יש לבחור תאריך תפוגה.', saveChanges:'שמירת שינויים', product:'מוצר', optional:'לא חובה',
     currentStock:'מלאי נוכחי', deleteDateEntry:'הסרת תאריך', sureDateEntry:'להסיר את רישום התפוגה הזה?',
     date:'תאריך', source:'רישום', newProduct:'מוצר חדש', editProduct:'עריכת מוצר', productCatalog:'קטלוג מוצרים',
-    expirySummary:'סקירת תפוגות', noMatches:'אין מוצרים התואמים לסינון.', languageChanged:'שפה'
+    expirySummary:'סקירת תפוגות', noMatches:'אין מוצרים התואמים לסינון.', languageChanged:'שפה',
+    installApp:'הוספה למכשיר', installHelpTitle:'הוספת BottleTrack למכשיר', installHelp:'ב-iPhone או iPad: הקישו על שיתוף ואז על „הוספה למסך הבית”. ב-Android: פתחו את תפריט הדפדפן ובחרו „התקנת אפליקציה” או „הוספה למסך הבית”.'
   },
   ru: {
     app:'BottleTrack', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
@@ -125,7 +127,8 @@ const messages = {
     dateRequired:'Укажите срок годности.', saveChanges:'Сохранить изменения', product:'Товар', optional:'Необязательно',
     currentStock:'Текущий запас', deleteDateEntry:'Удалить запись даты', sureDateEntry:'Удалить эту запись срока годности?',
     date:'Дата', source:'Запись', newProduct:'Новый товар', editProduct:'Изменить товар', productCatalog:'Каталог товаров',
-    expirySummary:'Обзор сроков годности', noMatches:'Нет товаров, соответствующих фильтрам.', languageChanged:'Язык'
+    expirySummary:'Обзор сроков годности', noMatches:'Нет товаров, соответствующих фильтрам.', languageChanged:'Язык',
+    installApp:'На устройство', installHelpTitle:'Добавить BottleTrack на устройство', installHelp:'На iPhone или iPad: нажмите «Поделиться», затем «На экран Домой». На Android: откройте меню браузера и выберите «Установить приложение» или «Добавить на главный экран».'
   }
 };
 const uid = () => (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -150,6 +153,8 @@ function App(){
   const [syncReady,setSyncReady]=useState(false);
   const [storageError,setStorageError]=useState(false);
   const [mobileMenu,setMobileMenu]=useState(false);
+  const [installPrompt,setInstallPrompt]=useState(null);
+  const [isInstalled,setIsInstalled]=useState(false);
   const [scanValue,setScanValue]=useState('');
   const [scanError,setScanError]=useState('');
   const [cameraOn,setCameraOn]=useState(false);
@@ -159,6 +164,14 @@ function App(){
   const t=messages[lang]||messages.en, rtl=lang==='he';
   useEffect(()=>{ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db));setStorageError(false);}catch(error){console.error('Could not save local inventory:',error);setStorageError(true);} },[db]);
   useEffect(()=>{localStorage.setItem(LANG_KEY,lang); document.documentElement.lang=lang;document.documentElement.dir=rtl?'rtl':'ltr';},[lang,rtl]);
+  useEffect(()=>{
+    const onInstallPrompt=event=>{event.preventDefault();setInstallPrompt(event)};
+    const onInstalled=()=>{setIsInstalled(true);setInstallPrompt(null)};
+    setIsInstalled(window.matchMedia?.('(display-mode: standalone)').matches||window.navigator.standalone===true);
+    window.addEventListener('beforeinstallprompt',onInstallPrompt);
+    window.addEventListener('appinstalled',onInstalled);
+    return()=>{window.removeEventListener('beforeinstallprompt',onInstallPrompt);window.removeEventListener('appinstalled',onInstalled)};
+  },[]);
   useEffect(()=>{if(!toast)return;const id=setTimeout(()=>{setToast('');setToastUndo(false);setDeletedProduct(null)},5000);return()=>clearTimeout(id)},[toast]);
   useEffect(()=>()=>stopCamera(),[]);
   useEffect(()=>{
@@ -304,6 +317,7 @@ function App(){
   const statusLabel=s=>s==='expired'?t.overdue:s==='soon'?t.soon:s==='ok'?t.ok:t.unknown;
   const StatusPill=({status})=><span className={`status status-${status}`}>{status==='expired'?<AlertTriangle size={13}/>:status==='soon'?<Clock3 size={13}/>:status==='ok'?<CheckCircle2 size={13}/>:<CalendarClock size={13}/>} {statusLabel(status)}</span>;
   const goInventory=()=>{setView('inventory');setSelected(null);setMobileMenu(false)};
+  const addToDevice=async()=>{if(!installPrompt){setModal('install-help');return}await installPrompt.prompt();setInstallPrompt(null)};
   return <div className={`app ${rtl?'rtl':''}`}>
     <aside className={`sidebar ${mobileMenu?'sidebar-open':''}`}>
       <div className="brand"><div className="brand-mark"><Wine size={23}/></div><div><strong>BottleTrack</strong><span>{t.tagline}</span></div></div>
@@ -318,7 +332,7 @@ function App(){
       </div>
     </aside>
     <main className="main">
-      <header className="topbar"><button className="icon-btn mobile-toggle" onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"><Menu/></button><div className="breadcrumb">{t.productCatalog}<span>/</span><b>{view==='detail'?selectedProduct?.name||t.details:view==='inventory'?t.inventory:t.expirySummary}</b></div><div className="top-actions"><span className={`storage-dot ${syncStatus==='error'||storageError?'sync-error':''}`}></span><span className="storage-label">{storageError?t.storageError:syncStatus==='loading'?t.syncLoading:syncStatus==='shared'?t.sharedInventory:syncStatus==='error'?t.syncError:t.localOnly}</span><button className="button primary top-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div></header>
+      <header className="topbar"><button className="icon-btn mobile-toggle" onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"><Menu/></button><div className="breadcrumb">{t.productCatalog}<span>/</span><b>{view==='detail'?selectedProduct?.name||t.details:view==='inventory'?t.inventory:t.expirySummary}</b></div><div className="top-actions"><span className={`storage-dot ${syncStatus==='error'||storageError?'sync-error':''}`}></span><span className="storage-label">{storageError?t.storageError:syncStatus==='loading'?t.syncLoading:syncStatus==='shared'?t.sharedInventory:syncStatus==='error'?t.syncError:t.localOnly}</span>{!isInstalled&&<button className="button secondary install-button" onClick={addToDevice} aria-label={t.installApp} title={t.installApp}><Download size={16}/><span>{t.installApp}</span></button>}<button className="button primary top-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div></header>
       {view==='detail'&&selectedProduct ? <section className="content detail-content">
         <button className="back-link" onClick={goInventory}>← {t.back}</button>
         <div className="detail-header"><div className="detail-identity">{isDisplayableProductPhoto(selectedProduct.photo)?<img className="detail-photo" src={selectedProduct.photo} alt={selectedProduct.name}/>:<div className="detail-photo placeholder"><Wine size={34}/></div>}<div><div className="eyebrow">{t.details}</div><h1>{selectedProduct.name}</h1><div className="subline"><Barcode size={15}/>{selectedProduct.barcode||t.noBarcode}</div></div></div><div className="detail-actions"><button className="button secondary" onClick={()=>openEdit(selectedProduct)}><Pencil size={16}/>{t.edit}</button><button className="button primary" onClick={()=>{setLotForm({expiry:''});setModal('lot')}}><Plus size={17}/>{t.addLot}</button></div></div>
@@ -342,6 +356,7 @@ function App(){
       </section>}
     </main>
     {modal==='duplicate'&&duplicateProduct&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setModal(null)}><div className="modal duplicate-modal"><div className="modal-heading"><div><div className="eyebrow">{t.barcode}</div><h2>{t.duplicate}</h2></div><button className="icon-btn" onClick={()=>setModal(null)} aria-label={t.close}><X/></button></div><div className="duplicate-summary"><span>{duplicateProduct.name}</span><code>{duplicateProduct.barcode}</code></div><p className="modal-description">{t.duplicatePrompt}</p><div className="duplicate-actions"><button className="button secondary" onClick={()=>{const p=duplicateProduct;setDuplicateProduct(null);openEdit(p)}}><Pencil size={16}/>{t.editExisting}</button><button className="button primary" onClick={()=>{const barcode=duplicateProduct.barcode;setDuplicateProduct(null);setForm(newProductForm(barcode));setModal('form')}}><Plus size={16}/>{t.createAnother}</button></div></div></div>}
+    {modal==='install-help'&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setModal(null)}><div className="modal install-modal" role="dialog" aria-modal="true" aria-labelledby="install-title"><div className="modal-heading"><div><div className="eyebrow">BottleTrack</div><h2 id="install-title">{t.installHelpTitle}</h2></div><button className="icon-btn" onClick={()=>setModal(null)} aria-label={t.close}><X/></button></div><p className="install-instructions">{t.installHelp}</p><div className="modal-footer"><button className="button primary" onClick={()=>setModal(null)}>{t.close}</button></div></div></div>}
     {modal==='form'&&form&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setModal(null)}><div className="modal form-modal"><div className="modal-heading"><div><div className="eyebrow">{form.id?t.editProduct:t.newProduct}</div><h2>{form.id?t.editProduct:t.add}</h2></div><button className="icon-btn" onClick={()=>setModal(null)}><X/></button></div><form onSubmit={saveProduct}><div className="form-grid"><label className="field full"><span>{t.barcode}</span><div className="barcode-input"><Barcode size={18}/><input value={form.barcode} onChange={e=>setForm({...form,barcode:e.target.value})} placeholder="7290000000000"/><button type="button" onClick={()=>{setModal('scanner');setScanValue(form.barcode||'')}} title={t.scan}><Camera size={17}/></button></div></label><label className="field full"><span>{t.name} *</span><input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder={t.name}/></label>
         <label className="field"><span>{t.expiry} ({t.optional})</span><input type="date" value={form.expiry} onChange={e=>setForm({...form,expiry:e.target.value})}/></label>
         <div className="field full"><span>{t.photo}</span><div className="photo-upload">{form.photo&&isDisplayableProductPhoto(form.photo)?<><img src={form.photo} alt={t.productPhoto}/><div><b>{t.productPhoto}</b><button type="button" className="text-button" onClick={()=>fileRef.current?.click()}>{t.changePhoto}</button><button type="button" className="text-button danger-text" onClick={()=>setForm({...form,photo:''})}>{t.removePhoto}</button></div></>:form.photo?<><div className="upload-placeholder"><Wine size={22}/><span>{t.photoTooLarge}</span></div><div><button type="button" className="text-button" onClick={()=>fileRef.current?.click()}>{t.changePhoto}</button><button type="button" className="text-button danger-text" onClick={()=>setForm({...form,photo:''})}>{t.removePhoto}</button></div></>:<button type="button" className="upload-placeholder" onClick={()=>fileRef.current?.click()}><ImagePlus size={22}/><span>{t.selectPhoto}</span></button>}<input ref={fileRef} hidden type="file" accept="image/*" capture="environment" onChange={photoChange}/></div></div>
