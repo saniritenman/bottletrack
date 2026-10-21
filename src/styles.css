@@ -90,7 +90,9 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 .metric-window-label{color:#9b6a21!important;font-weight:700}
 .lang-picker .theme-toggle{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;padding:0;border:1px solid #355447;border-radius:10px;background:#19382e;color:#d8ebde;transition:background .18s,border-color .18s}
 .lang-picker .theme-toggle:hover{background:#214437;border-color:#75a887}
-.lang-picker>svg:last-child{inset-inline-end:60px}
+.lang-select-wrap{position:relative;display:flex;align-items:center;flex:1;min-width:0}
+.lang-picker .lang-select-wrap select{width:100%;padding-inline:11px 34px}
+.lang-select-wrap .lang-chevron{position:absolute;inset-inline-end:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:#c1d7c8}
 :root[data-theme="dark"]{color-scheme:dark;color:#e5eee8;background:#111a16;--green:#63ae82;--green-dark:#194431;--mint:#20392c;--line:#2c3a32;--muted:#9aa9a0;--amber:#e4b763;--red:#e18a82}
 :root[data-theme="dark"] body,:root[data-theme="dark"] .app,:root[data-theme="dark"] .main{background:#111a16;color:#e5eee8}
 :root[data-theme="dark"] .topbar{background:rgba(21,31,25,.96);border-color:#2b3931}
