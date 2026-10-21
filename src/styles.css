@@ -56,3 +56,7 @@
 .scan-frame:before{top:50%;left:6%;right:6%;height:2px}
 .scan-frame:after{content:"";position:absolute;top:6%;bottom:6%;left:50%;width:2px;background:#b6efc5;box-shadow:0 0 8px #b6efc5}
 .scan-frame .scan-angle{position:absolute;left:8%;top:50%;width:84%;height:2px;background:#b6efc588;box-shadow:0 0 8px #b6efc5;transform:rotate(-35deg)}
+button.metric{width:100%;font:inherit;text-align:start;color:inherit;cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .18s}
+button.metric:hover{border-color:#aac5b1;box-shadow:0 5px 16px #1d4a2d12;transform:translateY(-1px)}
+button.metric.metric-active{border-color:var(--green);box-shadow:0 0 0 2px #1e65451c}
+button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}

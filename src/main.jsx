@@ -209,8 +209,9 @@ function App(){
     const s=p.nextLot?statusFor(p.nextLot.expiry):'unknown';
     return match&&(filter==='all'||filter===s);
   }).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const soonCount=products.reduce((n,p)=>n+(p.lots||[]).filter(l=>l.expiry&&statusFor(l.expiry)==='soon').length,0);
-  const expiredCount=products.reduce((n,p)=>n+(p.lots||[]).filter(l=>l.expiry&&statusFor(l.expiry)==='expired').length,0);
+  const soonCount=enriched.filter(p=>p.nextLot&&statusFor(p.nextLot.expiry)==='soon').length;
+  const expiredCount=enriched.filter(p=>p.nextLot&&statusFor(p.nextLot.expiry)==='expired').length;
+  const selectMetricFilter=value=>{setFilter(value);setView('inventory');setMobileMenu(false)};
   const log=(type,product,detail='')=>setDb(prev=>({...prev,activity:[{id:uid(),type,product:product?.name||'',barcode:product?.barcode||'',detail,at:new Date().toISOString()},...(prev.activity||[])].slice(0,100)}));
   const notify=s=>{setToast(s);setToastUndo(false);setDeletedProduct(null)};
   function stopCamera(){
@@ -329,9 +330,9 @@ function App(){
       </section>:<section className="content">
         <div className="page-heading"><div><div className="eyebrow">{t.overview}</div><h1>{t.inventory}</h1><p>{t.tagline}</p></div><button className="button primary mobile-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div>
         <div className="metric-grid">
-          <div className="metric"><div className="metric-top"><span>{t.tracked}</span><div className="metric-icon green"><Package size={18}/></div></div><strong>{products.length}</strong><small>{t.productsCount}</small></div>
-          <div className="metric"><div className="metric-top"><span>{t.expiring}</span><div className="metric-icon amber"><Clock3 size={18}/></div></div><strong>{soonCount}</strong><small>{t.soon}</small></div>
-          <div className="metric"><div className="metric-top"><span>{t.expired}</span><div className="metric-icon red"><AlertTriangle size={18}/></div></div><strong>{expiredCount}</strong><small>{t.overdue}</small></div>
+          <button type="button" className={`metric ${filter==='all'?'metric-active':''}`} onClick={()=>selectMetricFilter('all')} aria-pressed={filter==='all'}><div className="metric-top"><span>{t.tracked}</span><div className="metric-icon green"><Package size={18}/></div></div><strong>{products.length}</strong><small>{t.productsCount}</small></button>
+          <button type="button" className={`metric ${filter==='soon'?'metric-active':''}`} onClick={()=>selectMetricFilter('soon')} aria-pressed={filter==='soon'}><div className="metric-top"><span>{t.expiring}</span><div className="metric-icon amber"><Clock3 size={18}/></div></div><strong>{soonCount}</strong><small>{t.soon}</small></button>
+          <button type="button" className={`metric ${filter==='expired'?'metric-active':''}`} onClick={()=>selectMetricFilter('expired')} aria-pressed={filter==='expired'}><div className="metric-top"><span>{t.expired}</span><div className="metric-icon red"><AlertTriangle size={18}/></div></div><strong>{expiredCount}</strong><small>{t.overdue}</small></button>
         </div>
         <section className="inventory-panel">
           <div className="inventory-toolbar"><div><h2>{t.productCatalog}</h2><p>{filtered.length} {t.productsCount}</p></div><div className="toolbar-controls"><label className="searchbox"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t.search}/>{query&&<button onClick={()=>setQuery('')} aria-label={t.clearSearch}><X size={15}/></button>}</label><label className="filterbox"><Filter size={16}/><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">{t.all}</option><option value="ok">{t.ok}</option><option value="soon">{t.soon}</option><option value="expired">{t.overdue}</option><option value="unknown">{t.unknown}</option></select></label></div></div>
