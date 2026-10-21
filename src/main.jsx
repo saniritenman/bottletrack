@@ -4,7 +4,7 @@ import {
   Barcode, Search, Plus, Package, CalendarClock, AlertTriangle, CheckCircle2,
   Clock3, Camera, ImagePlus, X, Download, Upload, Languages,
   ChevronDown, Trash2, Pencil, Filter, Menu, Wine, CalendarDays,
-  Save, ScanLine, CircleHelp, RotateCcw, ArrowUpRight
+  Save, ScanLine, CircleHelp, RotateCcw, ArrowUpRight, Moon, Sun
 } from 'lucide-react';
 import './styles.css';
 import { createProduct, normalizeDatabase, updateProduct } from './product-model.js';
@@ -13,6 +13,7 @@ import { compressProductPhoto, isDisplayableProductPhoto } from './photo-utils.j
 
 const STORAGE_KEY = 'bottletrack.data.v1';
 const LANG_KEY = 'bottletrack.lang';
+const THEME_KEY = 'bottletrack.theme';
 const today = () => new Date().toISOString().slice(0,10);
 const emptyDB = { products: [], activity: [] };
 const messages = {
@@ -28,7 +29,7 @@ const messages = {
     details:'Product details', dateHistory:'Expiration history',
     latestExpiry:'Next expiration', added:'Added', updated:'Updated',
     days:'days', today:'Today', expiredBy:'days overdue', expiresIn:'days left', unknown:'No date',
-    filter:'Filter', language:'Language', backup:'Backup / restore', export:'Export JSON',
+    filter:'Filter', language:'Language', darkMode:'Switch to dark mode', lightMode:'Switch to light mode', backup:'Backup / restore', export:'Export JSON',
     import:'Import JSON', importHint:'Import replaces the current data on this browser. Export a backup first.',
     close:'Close', noHistory:'No history yet', scanTitle:'Scan a barcode', scanHint:'Hold the barcode anywhere in the frame. Horizontal, vertical, or diagonal is fine.',
     manual:'Enter barcode manually', useBarcode:'Use barcode', cameraError:'Camera access or barcode scanning is unavailable. Check browser permissions or enter the barcode manually.', photoError:'Could not process that image. Try another photo.',
@@ -66,7 +67,7 @@ const messages = {
     details:'פרטי מוצר', dateHistory:'היסטוריית תאריכי תפוגה',
     latestExpiry:'תפוגה קרובה', added:'נוסף', updated:'עודכן',
     days:'ימים', today:'היום', expiredBy:'ימים לאחר התפוגה', expiresIn:'ימים נותרו', unknown:'אין תאריך',
-    filter:'סינון', language:'שפה', backup:'גיבוי / שחזור', export:'ייצוא JSON',
+    filter:'סינון', language:'שפה', darkMode:'מעבר למצב כהה', lightMode:'מעבר למצב בהיר', backup:'גיבוי / שחזור', export:'ייצוא JSON',
     import:'ייבוא JSON', importHint:'הייבוא מחליף את הנתונים בדפדפן הזה. מומלץ לייצא גיבוי קודם.',
     close:'סגירה', noHistory:'אין עדיין היסטוריה', scanTitle:'סריקת ברקוד', scanHint:'החזיקו את הברקוד בכל זווית בתוך המסגרת. אופקי, אנכי או אלכסוני — הכול מתאים.',
     manual:'הזנת ברקוד ידנית', useBarcode:'שימוש בברקוד', cameraError:'אין אפשרות להשתמש במצלמה או בסריקה. בדקו הרשאות או הזינו ברקוד ידנית.', photoError:'לא ניתן לעבד את התמונה. נסו לבחור תמונה אחרת.',
@@ -104,7 +105,7 @@ const messages = {
     details:'Информация о товаре', dateHistory:'История сроков годности',
     latestExpiry:'Ближайший срок', added:'Добавлено', updated:'Обновлено',
     days:'дней', today:'Сегодня', expiredBy:'дн. просрочено', expiresIn:'дн. осталось', unknown:'Нет даты',
-    filter:'Фильтр', language:'Язык', backup:'Резервная копия / восстановление', export:'Экспорт JSON',
+    filter:'Фильтр', language:'Язык', darkMode:'Включить тёмную тему', lightMode:'Включить светлую тему', backup:'Резервная копия / восстановление', export:'Экспорт JSON',
     import:'Импорт JSON', importHint:'Импорт заменяет данные в этом браузере. Сначала сохраните резервную копию.',
     close:'Закрыть', noHistory:'Истории пока нет', scanTitle:'Сканирование штрихкода', scanHint:'Держите штрихкод в любой части рамки. Горизонтально, вертикально или по диагонали.',
     manual:'Ввести штрихкод вручную', useBarcode:'Использовать штрихкод', cameraError:'Камера или сканирование недоступны. Проверьте разрешения или введите штрихкод вручную.', photoError:'Не удалось обработать изображение. Попробуйте выбрать другое фото.',
@@ -140,6 +141,7 @@ const fmtDate = (d, lang) => d ? new Intl.DateTimeFormat(lang==='he'?'he-IL':lan
 function App(){
   const [db,setDb]=useState(readDB);
   const [lang,setLang]=useState(()=>localStorage.getItem(LANG_KEY)||'he');
+  const [theme,setTheme]=useState(()=>localStorage.getItem(THEME_KEY)==='dark'?'dark':'light');
   const [query,setQuery]=useState('');
   const [filter,setFilter]=useState('all');
   const [view,setView]=useState('inventory');
@@ -164,6 +166,7 @@ function App(){
   const t=messages[lang]||messages.en, rtl=lang==='he';
   useEffect(()=>{ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db));setStorageError(false);}catch(error){console.error('Could not save local inventory:',error);setStorageError(true);} },[db]);
   useEffect(()=>{localStorage.setItem(LANG_KEY,lang); document.documentElement.lang=lang;document.documentElement.dir=rtl?'rtl':'ltr';},[lang,rtl]);
+  useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem(THEME_KEY,theme);},[theme]);
   useEffect(()=>{
     const onInstallPrompt=event=>{event.preventDefault();setInstallPrompt(event)};
     const onInstalled=()=>{setIsInstalled(true);setInstallPrompt(null)};
@@ -329,7 +332,7 @@ function App(){
       <div className="sidebar-bottom">
         <div className="local-note"><div className="local-note-icon"><CircleHelp size={17}/></div><div><b>{syncStatus==='shared'?t.sharedInventory:t.localOnly}</b><p>{storageError?t.storageError:syncStatus==='error'?t.syncError:syncStatus==='shared'?t.sharedNotice:t.localNotice}</p></div></div>
         <div className="backup-actions"><button onClick={exportJSON}><Download size={16}/>{t.export}</button><button onClick={()=>importRef.current?.click()}><Upload size={16}/>{t.import}</button><input ref={importRef} type="file" accept=".json,application/json" hidden onChange={importJSON}/></div>
-        <div className="lang-picker"><Languages size={17}/><select aria-label={t.language} value={lang} onChange={e=>setLang(e.target.value)}><option value="he">עברית</option><option value="en">English</option><option value="ru">Русский</option></select><ChevronDown size={14}/></div>
+        <div className="lang-picker"><Languages size={17}/><select aria-label={t.language} value={lang} onChange={e=>setLang(e.target.value)}><option value="he">עברית</option><option value="en">English</option><option value="ru">Русский</option></select><button type="button" className="theme-toggle" onClick={()=>setTheme(v=>v==='dark'?'light':'dark')} aria-label={theme==='dark'?t.lightMode:t.darkMode} title={theme==='dark'?t.lightMode:t.darkMode}>{theme==='dark'?<Sun size={17}/>:<Moon size={17}/>}</button><ChevronDown size={14}/></div>
       </div>
     </aside>
     {mobileMenu&&<button type="button" className="sidebar-scrim" onClick={()=>setMobileMenu(false)} aria-label={t.close}/>}
