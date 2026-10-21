@@ -4,7 +4,7 @@ import {
   Barcode, Search, Plus, Package, CalendarClock, AlertTriangle, CheckCircle2,
   Clock3, Camera, ImagePlus, X, Download, Upload, Languages,
   ChevronDown, Trash2, Pencil, Filter, Menu, Wine, CalendarDays,
-  Save, ScanLine, CircleHelp, RotateCcw
+  Save, ScanLine, CircleHelp, RotateCcw, ArrowUpRight
 } from 'lucide-react';
 import './styles.css';
 import { createProduct, normalizeDatabase, updateProduct } from './product-model.js';
