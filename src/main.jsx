@@ -320,7 +320,7 @@ function App(){
   const addToDevice=async()=>{if(!installPrompt){setModal('install-help');return}await installPrompt.prompt();setInstallPrompt(null)};
   return <div className={`app ${rtl?'rtl':''}`}>
     <aside className={`sidebar ${mobileMenu?'sidebar-open':''}`}>
-      <div className="brand"><div className="brand-mark"><Wine size={23}/></div><div><strong>BottleTrack</strong><span>{t.tagline}</span></div></div>
+      <div className="brand"><div className="brand-mark"><Wine size={23}/></div><div><strong>BottleTrack</strong><span>{t.tagline}</span></div><button type="button" className="icon-btn sidebar-close" onClick={()=>setMobileMenu(false)} aria-label={t.close} title={t.close}><X size={20}/></button></div>
       <div className="nav-label">{t.overview}</div>
       <button className={`nav-item ${view==='inventory'?'active':''}`} onClick={goInventory}><Package size={18}/><span>{t.inventory}</span><span className="nav-count">{products.length}</span></button>
       <button className={`nav-item ${view==='expiring'?'active':''}`} onClick={()=>{setFilter('soon');setView('inventory');setMobileMenu(false)}}><Clock3 size={18}/><span>{t.expiring}</span>{soonCount>0&&<span className="nav-count warn">{soonCount}</span>}</button>
@@ -331,6 +331,7 @@ function App(){
         <div className="lang-picker"><Languages size={17}/><select aria-label={t.language} value={lang} onChange={e=>setLang(e.target.value)}><option value="he">עברית</option><option value="en">English</option><option value="ru">Русский</option></select><ChevronDown size={14}/></div>
       </div>
     </aside>
+    {mobileMenu&&<button type="button" className="sidebar-scrim" onClick={()=>setMobileMenu(false)} aria-label={t.close}/>}
     <main className="main">
       <header className="topbar"><button className="icon-btn mobile-toggle" onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"><Menu/></button><div className="breadcrumb">{t.productCatalog}<span>/</span><b>{view==='detail'?selectedProduct?.name||t.details:view==='inventory'?t.inventory:t.expirySummary}</b></div><div className="top-actions"><span className={`storage-dot ${syncStatus==='error'||storageError?'sync-error':''}`}></span><span className="storage-label">{storageError?t.storageError:syncStatus==='loading'?t.syncLoading:syncStatus==='shared'?t.sharedInventory:syncStatus==='error'?t.syncError:t.localOnly}</span>{!isInstalled&&<button className="button secondary install-button" onClick={addToDevice} aria-label={t.installApp} title={t.installApp}><Download size={16}/><span>{t.installApp}</span></button>}<button className="button primary top-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div></header>
       {view==='detail'&&selectedProduct ? <section className="content detail-content">
