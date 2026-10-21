@@ -331,15 +331,15 @@ function App(){
 }
 
 class AppErrorBoundary extends React.Component {
-  state = { failed: false };
-  static getDerivedStateFromError() { return { failed: true }; }
+  state = { failed: false, message: '' };
+  static getDerivedStateFromError(error) { return { failed: true, message: `${error?.name || 'Error'}: ${error?.message || 'Unknown render error'}` }; }
   componentDidCatch(error) { console.error('BottleTrack could not render the saved inventory:', error); }
   render() {
     if (!this.state.failed) return this.props.children;
     return <main role="alert" style={{ minHeight: '100vh', display: 'grid', placeContent: 'center', gap: 12, padding: 24, fontFamily: 'system-ui, sans-serif', textAlign: 'center', color: '#17251f' }}>
       <h1>BottleTrack couldn’t display this inventory</h1>
       <p>Your shared products are still saved. Reload the page to try again.</p>
-      <button onClick={() => window.location.reload()} style={{ justifySelf: 'center', padding: '12px 20px' }}>Reload</button>
+      <code>{this.state.message}</code><button onClick={() => window.location.reload()} style={{ justifySelf: 'center', padding: '12px 20px' }}>Reload</button>
     </main>;
   }
 }
