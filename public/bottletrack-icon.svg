@@ -11,9 +11,14 @@
   </defs>
   <rect width="512" height="512" rx="118" fill="url(#bg)"/>
   <circle cx="395" cy="116" r="55" fill="#61d6ed" opacity=".18"/>
-  <path d="M209 91h94v55l36 40c13 15 21 34 21 54v168c0 31-25 56-56 56h-96c-31 0-56-25-56-56V240c0-20 8-39 21-54l36-40V91Z" fill="url(#glass)"/>
-  <path d="M205 287c31-18 65 18 101 0 19-10 35-9 54-1v122c0 31-25 56-56 56h-96c-31 0-56-25-56-56V305c20 1 36-7 53-18Z" fill="#48c4e5"/>
-  <path d="M209 91h94v43h-94z" rx="12" fill="#bde9ff"/>
-  <path d="M178 246c34-15 71 17 105 2 22-10 46-10 67-1" fill="none" stroke="#1761a9" stroke-linecap="round" stroke-width="13"/>
-  <path d="m370 190 9 22 22 9-22 9-9 22-9-22-22-9 22-9 9-22Z" fill="#fff" opacity=".92"/>
+  <path d="M171 87h74v54l28 32c12 14 18 31 18 49v174c0 28-22 50-50 50h-66c-28 0-50-22-50-50V222c0-18 6-35 18-49l28-32V87Z" fill="url(#glass)"/>
+  <path d="M171 273c22-13 43 12 65 0 19-10 37-9 55-1v124c0 28-22 50-50 50h-66c-28 0-50-22-50-50V289c19 1 32-7 46-16Z" fill="#48c4e5"/>
+  <path d="M171 87h74v39h-74z" rx="10" fill="#bde9ff"/>
+  <path d="M134 229c28-13 55 14 82 2 19-9 37-8 54-1" fill="none" stroke="#1761a9" stroke-linecap="round" stroke-width="12"/>
+  <rect x="300" y="245" width="145" height="151" rx="22" fill="#fff"/>
+  <path d="M300 267c0-12 10-22 22-22h101c12 0 22 10 22 22v27H300v-27Z" fill="#76d5ed"/>
+  <path d="M333 237v22m78-22v22" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+  <path d="M321 316v49m12-49v49m14-49v49m9-49v49m18-49v49m11-49v49m15-49v49m10-49v49m17-49v49" stroke="#175b9d" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="421" cy="366" r="37" fill="#2678d8" stroke="#fff" stroke-width="8"/>
+  <path d="m421 343 6 15 15 6-15 6-6 15-6-15-15-6 15-6 6-15Z" fill="#fff"/>
 </svg>

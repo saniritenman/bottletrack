@@ -199,5 +199,49 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 :root[data-theme="dark"] .local-note{border-color:#315477}
 :root[data-theme="dark"] .backup-actions button{border-color:#365a80;color:#d9eaff}
 :root[data-theme="dark"] .lang-picker{border-color:#304f72;color:#b9cde3}
+:root[data-theme="dark"] .metric,:root[data-theme="dark"] .inventory-panel,:root[data-theme="dark"] .stat-card,:root[data-theme="dark"] .panel{background:#18283d;border-color:#2c4058;box-shadow:0 4px 16px #07132345}
+:root[data-theme="dark"] .metric strong,:root[data-theme="dark"] .stat-card>strong{color:#edf5ff}
+:root[data-theme="dark"] .metric-top,:root[data-theme="dark"] .metric small,:root[data-theme="dark"] .stat-card>span,:root[data-theme="dark"] .stat-card small{color:#a5b8cf}
+:root[data-theme="dark"] .inventory-toolbar{border-color:#2c4058}
+:root[data-theme="dark"] .inventory-toolbar h2,:root[data-theme="dark"] .panel-heading h2,:root[data-theme="dark"] .timeline-main strong{color:#e4efff}
+:root[data-theme="dark"] .inventory-toolbar p,:root[data-theme="dark"] .panel-heading p,:root[data-theme="dark"] .timeline-main span,:root[data-theme="dark"] .timeline-main small{color:#9db1c9}
+:root[data-theme="dark"] .product-row{background:#18283d;border-color:#2c4058}
+:root[data-theme="dark"] .product-row:hover{background:#203650}
+:root[data-theme="dark"] .product-main strong,:root[data-theme="dark"] .product-expiry strong,:root[data-theme="dark"] .product-price strong{color:#e4efff}
+:root[data-theme="dark"] .product-main span,:root[data-theme="dark"] .product-expiry span,:root[data-theme="dark"] .product-price span,:root[data-theme="dark"] .product-status small{color:#9db1c9}
+:root[data-theme="dark"] .panel-heading,:root[data-theme="dark"] .panel-footer,:root[data-theme="dark"] .timeline-row{border-color:#2c4058}
+:root[data-theme="dark"] .searchbox,:root[data-theme="dark"] .filterbox,:root[data-theme="dark"] .field input,:root[data-theme="dark"] .field textarea,:root[data-theme="dark"] .field select,:root[data-theme="dark"] .barcode-input,:root[data-theme="dark"] .price-input{background:#111e30;border-color:#344b67;color:#e4efff}
+:root[data-theme="dark"] .searchbox input,:root[data-theme="dark"] .filterbox select{color:#e4efff}
+:root[data-theme="dark"] .button.secondary{background:#20344d;border-color:#3b5574;color:#e4efff}
+:root[data-theme="dark"] .button.secondary:hover{background:#294461;border-color:#5d82ab}
+:root[data-theme="dark"] .bottom-tip{background:#1a2c42;border-color:#304760;color:#a8bbd2}
+:root[data-theme="dark"] .bottom-tip strong,:root[data-theme="dark"] .bottom-tip button{color:#9dcfff}
+:root[data-theme="dark"] .empty-state h3,:root[data-theme="dark"] .empty-state p{color:#c8d8eb}
+:root[data-theme="dark"] .product-thumb,:root[data-theme="dark"] .detail-photo.placeholder,:root[data-theme="dark"] .empty-illustration{background:#203a56;color:#a9d5ff}
+:root[data-theme="dark"] .status-ok{background:#1b3550;color:#a9d5ff}
+:root[data-theme="dark"] .back-link,:root[data-theme="dark"] .subline,:root[data-theme="dark"] .description{color:#a5b8cf}
+:root[data-theme="dark"] .modal{background:#18283d;color:#e7eef8;border-color:#2c4058}
+:root[data-theme="dark"] .modal-heading h2{color:#edf5ff}
+:root[data-theme="dark"] .modal-description,:root[data-theme="dark"] .field>span{color:#a5b8cf}
+:root[data-theme="dark"] .modal-footer{border-color:#2c4058}
+:root[data-theme="dark"] .photo-upload{border-color:#344b67}
+:root[data-theme="dark"] .photo-upload b{color:#d9e8fa}
+:root[data-theme="dark"] .toast{background:#174d85;color:white}
+:root[data-theme="dark"] .lang-picker .theme-toggle{background:#203a56;border-color:#426184;color:#c6e4ff}
+:root[data-theme="dark"] .lang-picker .theme-toggle:hover{background:#294a6d;border-color:#78b7f2}
+:root[data-theme="dark"] .lang-picker select{color:#edf5ff;background:#203a56;border:1px solid #426184;border-radius:11px;padding-block:10px}
+:root[data-theme="dark"] .lang-picker select option{background:#172a41;color:#edf5ff}
+:root[data-theme="dark"] .backup-actions button{background:#172a41}
+:root[data-theme="dark"] .status-unknown{background:#29384a;color:#c2cedd}
+:root[data-theme="dark"] .detail-grid .price-icon{background:#203a56;color:#a9d5ff}
+:root[data-theme="dark"] .detail-grid .small-action{background:#203a56;border-color:#3b5574;color:#b6d8f8}
+:root[data-theme="dark"] .scanner-view{background:#10243d}
+:root[data-theme="dark"] .barcode-input button{background:#203a56;color:#b6d8f8}
+:root[data-theme="dark"] .icon-btn:hover{background:#203a56;color:#b6d8f8}
+:root[data-theme="dark"] .text-button{color:#9dcfff}
+:root[data-theme="dark"] .status-soon{background:#40351f;color:#edc36c}
+:root[data-theme="dark"] .status-expired{background:#432927;color:#f19b93}
+:root[data-theme="dark"] .metric-icon.amber{background:#40351f;color:#edc36c}
+:root[data-theme="dark"] .metric-icon.red{background:#432927;color:#ee9189}
 :root[data-theme="dark"] .lang-picker .theme-toggle{background:#1b3550;border-color:#3a5878;color:#c6e4ff}
 :root[data-theme="dark"] .scan-frame{border-color:#9adfff}

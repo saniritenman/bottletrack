@@ -18,7 +18,7 @@ const today = () => new Date().toISOString().slice(0,10);
 const emptyDB = { products: [], activity: [] };
 const messages = {
   en: {
-    app:'BottleTrack', branchLabel:'Bana Mashkaot · Sderot', tagline:'Your stock. In date. Under control.', overview:'Overview', inventory:'Inventory',
+    app:'BottleTrack', branchLabel:'Bana Mashkaot · Sderot Branch', tagline:'Your stock. In date. Under control.', overview:'Overview', inventory:'Inventory',
     expiring:'Expiring soon', expired:'Expired', products:'Products', tracked:'Tracked products',
     search:'Search name or barcode…', scan:'Scan barcode', add:'Add product', addLot:'Add expiry date',
     all:'All products', ok:'In date', soon:'Expiring soon', overdue:'Expired', noProducts:'No products yet',
@@ -56,7 +56,7 @@ const messages = {
     installApp:'Add to device', installHelpTitle:'Add BottleTrack to your device', installHelp:'On iPhone or iPad: tap Share, then choose “Add to Home Screen”. On Android: open your browser menu and choose “Install app” or “Add to Home screen”.', within30Days:'≤ 30 days'
   },
   he: {
-    app:'BottleTrack', branchLabel:'בנה משקאות · שדרות', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
+    app:'BottleTrack', branchLabel:'בנה משקאות · סניף שדרות', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
     expiring:'עומדים לפוג', expired:'פגי תוקף', products:'מוצרים', tracked:'מוצרים במעקב',
     search:'חיפוש לפי שם או ברקוד…', scan:'סריקת ברקוד', add:'הוספת מוצר', addLot:'הוספת תאריך תפוגה',
     all:'כל המוצרים', ok:'בתוקף', soon:'עומדים לפוג', overdue:'פג תוקף', noProducts:'עדיין אין מוצרים',
@@ -94,7 +94,7 @@ const messages = {
     installApp:'הוספה למכשיר', installHelpTitle:'הוספת BottleTrack למכשיר', installHelp:'ב-iPhone או iPad: הקישו על שיתוף ואז על „הוספה למסך הבית”. ב-Android: פתחו את תפריט הדפדפן ובחרו „התקנת אפליקציה” או „הוספה למסך הבית”.', within30Days:'עד 30 יום'
   },
   ru: {
-    app:'BottleTrack', branchLabel:'Bana Mashkaot · Сдерот', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
+    app:'BottleTrack', branchLabel:'Bana Mashkaot · филиал Сдерот', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
     expiring:'Скоро истекает', expired:'Просрочено', products:'Товары', tracked:'Товаров отслеживается',
     search:'Поиск по названию или штрихкоду…', scan:'Сканировать штрихкод', add:'Добавить товар', addLot:'Добавить срок годности',
     all:'Все товары', ok:'В сроке', soon:'Скоро истекает', overdue:'Просрочено', noProducts:'Пока нет товаров',
