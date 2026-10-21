@@ -79,3 +79,9 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 .top-add{min-height:46px;padding:12px 20px;font-size:14px;gap:9px}
 @media(max-width:850px){.topbar-context{gap:12px}.breadcrumb{margin-inline-end:0}.topbar-home strong{font-size:14px}.top-add{font-size:13px;padding:11px 16px}}
 @media(max-width:600px){.breadcrumb{display:none}.topbar-home{padding:0}.topbar-home .brand-mark{width:34px;height:34px;flex-basis:34px}.topbar-home strong{display:none}.top-add{min-height:42px;padding:10px 12px;font-size:12px;gap:6px}}
+.topbar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"context home actions";justify-content:initial;gap:10px}
+.topbar-context{grid-area:context;justify-self:start;overflow:hidden}
+.topbar-home{grid-area:home;justify-self:center;padding:0}
+.top-actions{grid-area:actions;justify-self:start}
+.breadcrumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1120px){.storage-label{display:none}.install-button{width:40px;padding:0}.install-button span{display:none}}
