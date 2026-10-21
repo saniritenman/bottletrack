@@ -18,7 +18,7 @@ const today = () => new Date().toISOString().slice(0,10);
 const emptyDB = { products: [], activity: [] };
 const messages = {
   en: {
-    app:'BottleTrack', tagline:'Your stock. In date. Under control.', overview:'Overview', inventory:'Inventory',
+    app:'BottleTrack', branchLabel:'Bana Mashkaot · Sderot', tagline:'Your stock. In date. Under control.', overview:'Overview', inventory:'Inventory',
     expiring:'Expiring soon', expired:'Expired', products:'Products', tracked:'Tracked products',
     search:'Search name or barcode…', scan:'Scan barcode', add:'Add product', addLot:'Add expiry date',
     all:'All products', ok:'In date', soon:'Expiring soon', overdue:'Expired', noProducts:'No products yet',
@@ -56,7 +56,7 @@ const messages = {
     installApp:'Add to device', installHelpTitle:'Add BottleTrack to your device', installHelp:'On iPhone or iPad: tap Share, then choose “Add to Home Screen”. On Android: open your browser menu and choose “Install app” or “Add to Home screen”.', within30Days:'≤ 30 days'
   },
   he: {
-    app:'BottleTrack', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
+    app:'BottleTrack', branchLabel:'בנה משקאות · שדרות', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
     expiring:'עומדים לפוג', expired:'פגי תוקף', products:'מוצרים', tracked:'מוצרים במעקב',
     search:'חיפוש לפי שם או ברקוד…', scan:'סריקת ברקוד', add:'הוספת מוצר', addLot:'הוספת תאריך תפוגה',
     all:'כל המוצרים', ok:'בתוקף', soon:'עומדים לפוג', overdue:'פג תוקף', noProducts:'עדיין אין מוצרים',
@@ -94,7 +94,7 @@ const messages = {
     installApp:'הוספה למכשיר', installHelpTitle:'הוספת BottleTrack למכשיר', installHelp:'ב-iPhone או iPad: הקישו על שיתוף ואז על „הוספה למסך הבית”. ב-Android: פתחו את תפריט הדפדפן ובחרו „התקנת אפליקציה” או „הוספה למסך הבית”.', within30Days:'עד 30 יום'
   },
   ru: {
-    app:'BottleTrack', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
+    app:'BottleTrack', branchLabel:'Bana Mashkaot · Сдерот', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
     expiring:'Скоро истекает', expired:'Просрочено', products:'Товары', tracked:'Товаров отслеживается',
     search:'Поиск по названию или штрихкоду…', scan:'Сканировать штрихкод', add:'Добавить товар', addLot:'Добавить срок годности',
     all:'Все товары', ok:'В сроке', soon:'Скоро истекает', overdue:'Просрочено', noProducts:'Пока нет товаров',
@@ -324,7 +324,7 @@ function App(){
   const addToDevice=async()=>{if(!installPrompt){setModal('install-help');return}await installPrompt.prompt();setInstallPrompt(null)};
   return <div className={`app ${rtl?'rtl':''}`}>
     <aside className={`sidebar ${mobileMenu?'sidebar-open':''}`}>
-      <div className="brand"><div className="brand-mark"><Wine size={23}/></div><div><strong>BottleTrack</strong><span>{t.tagline}</span></div><button type="button" className="icon-btn sidebar-close" onClick={()=>setMobileMenu(false)} aria-label={t.close} title={t.close}><X size={20}/></button></div>
+      <div className="brand"><div className="brand-mark"><img src="./bottletrack-icon.svg" alt=""/></div><div><strong>{t.app}</strong><span>{t.branchLabel}</span></div><button type="button" className="icon-btn sidebar-close" onClick={()=>setMobileMenu(false)} aria-label={t.close} title={t.close}><X size={20}/></button></div>
       <div className="nav-label">{t.overview}</div>
       <button className={`nav-item ${view==='inventory'?'active':''}`} onClick={goInventory}><Package size={18}/><span>{t.inventory}</span><span className="nav-count">{products.length}</span></button>
       <button className={`nav-item ${view==='expiring'?'active':''}`} onClick={()=>{setFilter('soon');setView('inventory');setMobileMenu(false)}}><Clock3 size={18}/><span>{t.expiring}</span>{soonCount>0&&<span className="nav-count warn">{soonCount}</span>}</button>
@@ -337,7 +337,7 @@ function App(){
     </aside>
     {mobileMenu&&<button type="button" className="sidebar-scrim" onClick={()=>setMobileMenu(false)} aria-label={t.close}/>}
     <main className="main">
-      <header className="topbar"><div className="topbar-context"><button className="icon-btn mobile-toggle" onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"><Menu/></button><div className="breadcrumb">{t.productCatalog}<span>/</span><b>{view==='detail'?selectedProduct?.name||t.details:view==='inventory'?t.inventory:t.expirySummary}</b></div></div><button type="button" className="topbar-home" onClick={goHome} aria-label={`${t.app} — ${t.inventory}`} title={t.inventory}><span className="brand-mark"><Wine size={20}/></span><strong>BottleTrack</strong></button><div className="top-actions"><span className={`storage-dot ${syncStatus==='error'||storageError?'sync-error':''}`}></span><span className="storage-label">{storageError?t.storageError:syncStatus==='loading'?t.syncLoading:syncStatus==='shared'?t.sharedInventory:syncStatus==='error'?t.syncError:t.localOnly}</span>{!isInstalled&&<button className="button secondary install-button" onClick={addToDevice} aria-label={t.installApp} title={t.installApp}><Download size={16}/><span>{t.installApp}</span></button>}<button className="button primary top-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div></header>
+      <header className="topbar"><div className="topbar-context"><button className="icon-btn mobile-toggle" onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"><Menu/></button><div className="breadcrumb">{t.productCatalog}<span>/</span><b>{view==='detail'?selectedProduct?.name||t.details:view==='inventory'?t.inventory:t.expirySummary}</b></div></div><button type="button" className="topbar-home" onClick={goHome} aria-label={`${t.app} — ${t.inventory}`} title={t.inventory}><span className="brand-mark"><img src="./bottletrack-icon.svg" alt=""/></span><span className="topbar-brand-text"><strong>{t.app}</strong><small>{t.branchLabel}</small></span></button><div className="top-actions"><span className={`storage-dot ${syncStatus==='error'||storageError?'sync-error':''}`}></span><span className="storage-label">{storageError?t.storageError:syncStatus==='loading'?t.syncLoading:syncStatus==='shared'?t.sharedInventory:syncStatus==='error'?t.syncError:t.localOnly}</span>{!isInstalled&&<button className="button secondary install-button" onClick={addToDevice} aria-label={t.installApp} title={t.installApp}><Download size={16}/><span>{t.installApp}</span></button>}<button className="button primary top-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div></header>
       {view==='detail'&&selectedProduct ? <section className="content detail-content">
         <button className="back-link" onClick={goInventory}>← {t.back}</button>
         <div className="detail-header"><div className="detail-identity">{isDisplayableProductPhoto(selectedProduct.photo)?<img className="detail-photo" src={selectedProduct.photo} alt={selectedProduct.name}/>:<div className="detail-photo placeholder"><Wine size={34}/></div>}<div><div className="eyebrow">{t.details}</div><h1>{selectedProduct.name}</h1><div className="subline"><Barcode size={15}/>{selectedProduct.barcode||t.noBarcode}</div></div></div><div className="detail-actions"><button className="button secondary" onClick={()=>openEdit(selectedProduct)}><Pencil size={16}/>{t.edit}</button><button className="button primary" onClick={()=>{setLotForm({expiry:''});setModal('lot')}}><Plus size={17}/>{t.addLot}</button></div></div>

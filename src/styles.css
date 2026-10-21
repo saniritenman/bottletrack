@@ -141,3 +141,63 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 :root[data-theme="dark"] .photo-upload{border-color:#37463d}
 :root[data-theme="dark"] .photo-upload b{color:#d5e2d9}
 :root[data-theme="dark"] .lang-picker select option{background:#17221c;color:#e3eee7}
+
+/* BottleTrack blue identity for the Bana Mashkaot Sderot branch. */
+:root{--green:#1765b5;--green-dark:#104985;--mint:#e5f1ff;--line:#e1eaf3;--muted:#718196}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline-color:#78b7f2}
+.sidebar{background:#122b4a;color:#edf5ff}
+.brand-mark{background:transparent;color:#d9efff;overflow:hidden}
+.brand-mark img{display:block;width:100%;height:100%;object-fit:cover}
+.brand span{color:#afc6df}
+.nav-label{color:#8eacca}
+.nav-item{color:#c5d6eb}
+.nav-item:hover{background:#1c3b61}
+.nav-item.active{background:#dcecff;color:#174d85}
+.nav-count{background:#24476d;color:#dcecff}
+.nav-item.active .nav-count{background:#c4ddfa;color:#174d85}
+.local-note{border-color:#315477}
+.local-note-icon{color:#a7d7f4}
+.local-note p{color:#b5c9df}
+.backup-actions button{border-color:#365a80;color:#d9eaff}
+.backup-actions button:hover{background:#1b3b60}
+.lang-picker{border-color:#304f72;color:#b9cde3}
+.lang-picker select{color:#e7f2ff}
+.lang-picker .theme-toggle{border-color:#3a5c80;background:#1b3b61;color:#d9ecff}
+.lang-picker .theme-toggle:hover{background:#254a76;border-color:#78b7f2}
+.lang-select-wrap .lang-chevron{color:#c4d9ef}
+.topbar-home{color:#163d6c}
+.metric-icon.green{color:#1765b5;background:#e5f1ff}
+.product-thumb{background:#edf5fd;color:#5a8fc6}
+.empty-illustration{background:#e5f1ff;color:#347bc0}
+.status-ok{background:#e5f1ff;color:#2469a7}
+.detail-photo.placeholder{background:#e5f1ff;color:#347bc0}
+.small-action{border-color:#d6e6f6;background:#f3f8fe;color:#205e9b}
+.icon-btn:hover{background:#edf5fd;color:#205e9b}
+.text-button,.bottom-tip button{color:#205e9b}
+.field input:focus,.field textarea:focus{border-color:#78aee0;box-shadow:0 0 0 3px #e5f1ff}
+.barcode-input button{background:#edf5fd;color:#2b70af}
+.scanner-view{background:#142d4a}
+.scan-frame{border-color:#c3e8ff}
+.scan-frame:before,.scan-frame:after,.scan-frame .scan-angle{background:#9adfff;box-shadow:0 0 8px #9adfff}
+.sidebar-close{border-color:#365a80;color:#e7f2ff}
+.sidebar-close:hover{background:#1b3b60}
+.sidebar-scrim{background:#10284580}
+.topbar-home .brand-mark{border-radius:11px}
+:root[data-theme="dark"]{color-scheme:dark;color:#e7eef8;background:#101a28;--green:#5da9f2;--green-dark:#1d4d7e;--mint:#1b3048;--line:#29394e;--muted:#9aacc1}
+:root[data-theme="dark"] body,:root[data-theme="dark"] .app,:root[data-theme="dark"] .main{background:#101a28;color:#e7eef8}
+:root[data-theme="dark"] .sidebar{background:#0d2038;color:#e7f1fd}
+:root[data-theme="dark"] .topbar{background:rgba(18,31,49,.96);border-color:#29394e}
+:root[data-theme="dark"] .topbar-home{color:#e3efff}
+:root[data-theme="dark"] .metric-icon.green{background:#1b3550;color:#83c3ff}
+:root[data-theme="dark"] .product-thumb,:root[data-theme="dark"] .detail-photo.placeholder,:root[data-theme="dark"] .empty-illustration{background:#203a56;color:#a9d5ff}
+:root[data-theme="dark"] .status-ok{background:#1b3550;color:#a9d5ff}
+:root[data-theme="dark"] .status-ok{background:#1b3550;color:#a9d5ff}
+:root[data-theme="dark"] .nav-item.active{background:#dcecff;color:#174d85}
+:root[data-theme="dark"] .nav-item.active .nav-count{background:#c4ddfa;color:#174d85}
+:root[data-theme="dark"] .sidebar .nav-item:hover{background:#1c3b61}
+:root[data-theme="dark"] .sidebar .nav-count{background:#24476d;color:#dcecff}
+:root[data-theme="dark"] .local-note{border-color:#315477}
+:root[data-theme="dark"] .backup-actions button{border-color:#365a80;color:#d9eaff}
+:root[data-theme="dark"] .lang-picker{border-color:#304f72;color:#b9cde3}
+:root[data-theme="dark"] .lang-picker .theme-toggle{background:#1b3550;border-color:#3a5878;color:#c6e4ff}
+:root[data-theme="dark"] .scan-frame{border-color:#9adfff}
