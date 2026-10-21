@@ -134,7 +134,7 @@ const messages = {
 const uid = () => (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
 const readDB = () => { try { return normalizeDatabase(JSON.parse(localStorage.getItem(STORAGE_KEY))); } catch { return emptyDB; } };
 const daysUntil = d => d ? Math.ceil((new Date(d+'T00:00:00') - new Date(today()+'T00:00:00')) / 86400000) : null;
-const statusFor = d => { const n=daysUntil(d); if(n===null)return 'unknown'; if(n<0)return 'expired'; if(n<=60)return 'soon'; return 'ok'; };
+const statusFor = d => { const n=daysUntil(d); if(n===null)return 'unknown'; if(n<0)return 'expired'; if(n<=30)return 'soon'; return 'ok'; };
 const fmtDate = (d, lang) => d ? new Intl.DateTimeFormat(lang==='he'?'he-IL':lang==='ru'?'ru-RU':'en-GB',{day:'numeric',month:'short',year:'numeric'}).format(new Date(d+'T12:00:00')) : '—';
 
 function App(){
