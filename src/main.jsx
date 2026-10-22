@@ -4,7 +4,7 @@ import {
   Barcode, Search, Plus, Package, CalendarClock, AlertTriangle, CheckCircle2,
   Clock3, Camera, ImagePlus, X, Download, Upload, Languages,
   ChevronDown, Trash2, Pencil, Filter, Menu, Wine, CalendarDays,
-  Save, ScanLine, CircleHelp, RotateCcw, ArrowUpRight, Moon, Sun
+  Save, ScanLine, CircleHelp, RotateCcw, ArrowUpRight, Moon, Sun, Cloud, CloudOff, LoaderCircle
 } from 'lucide-react';
 import './styles.css';
 import { createProduct, mergeDatabases, normalizeDatabase, updateProduct } from './product-model.js';
@@ -46,7 +46,7 @@ const messages = {
     duplicate:'This barcode is already in your inventory.', open:'Open product',
     duplicatePrompt:'What would you like to do with the existing barcode?', editExisting:'Edit existing product', createAnother:'Create another product',
     undo:'Undo', productDeleted:'Product deleted.', productRestored:'Product restored.', sharedInventory:'Shared inventory', syncLoading:'Connecting to shared inventory…', syncError:'Could not sync. Showing this browser’s saved data.',
-    sharedNotice:'Anyone with the site link can view and change this inventory. Export backups regularly.', saveError:'Could not save the product. Please try again.',
+    sharedNotice:'Anyone with the site link can view and change this inventory. Export backups regularly.', syncLabel:'Sync status', syncSynced:'Synced', syncLocal:'This device only', syncSaving:'Syncing…', syncFailed:'Not synced', saveError:'Could not save the product. Please try again.',
     storageError:'Browser storage is full. Export a backup and remove a large photo.',
     productPhoto:'Product image', photoTooLarge:'Choose a smaller photo for reliable mobile viewing.', addNewDate:'Record a new expiration date',
     dateRequired:'Choose an expiration date.', saveChanges:'Save changes', product:'Product', optional:'Optional',
@@ -84,7 +84,7 @@ const messages = {
     duplicate:'הברקוד הזה כבר קיים במלאי.', open:'פתיחת מוצר',
     duplicatePrompt:'מה תרצו לעשות עם הברקוד הקיים?', editExisting:'עריכת המוצר הקיים', createAnother:'יצירת מוצר נוסף',
     undo:'ביטול', productDeleted:'המוצר נמחק.', productRestored:'המוצר שוחזר.', sharedInventory:'מלאי משותף', syncLoading:'מתחבר למלאי המשותף…', syncError:'הסנכרון נכשל. מוצגים הנתונים השמורים בדפדפן הזה.',
-    sharedNotice:'כל מי שיש לו קישור לאתר יכול לצפות ולשנות את המלאי. ייצאו גיבויים באופן קבוע.', saveError:'לא ניתן לשמור את המוצר. נסו שוב.',
+    sharedNotice:'כל מי שיש לו קישור לאתר יכול לצפות ולשנות את המלאי. ייצאו גיבויים באופן קבוע.', syncLabel:'מצב סנכרון', syncSynced:'מסונכרן', syncLocal:'במכשיר הזה בלבד', syncSaving:'מסנכרן…', syncFailed:'לא מסונכרן', saveError:'לא ניתן לשמור את המוצר. נסו שוב.',
     storageError:'האחסון בדפדפן מלא. ייצאו גיבוי והסירו תמונה גדולה.',
     productPhoto:'תמונת מוצר', photoTooLarge:'בחרו תמונה קטנה יותר לצפייה אמינה בנייד.', addNewDate:'רישום תאריך תפוגה חדש',
     dateRequired:'יש לבחור תאריך תפוגה.', saveChanges:'שמירת שינויים', product:'מוצר', optional:'לא חובה',
@@ -122,7 +122,7 @@ const messages = {
     duplicate:'Этот штрихкод уже есть в запасе.', open:'Открыть товар',
     duplicatePrompt:'Что сделать с существующим штрихкодом?', editExisting:'Изменить товар', createAnother:'Создать ещё один товар',
     undo:'Отменить', productDeleted:'Товар удалён.', productRestored:'Товар восстановлен.', sharedInventory:'Общий склад', syncLoading:'Подключение к общему складу…', syncError:'Не удалось синхронизировать. Показаны данные этого браузера.',
-    sharedNotice:'Любой, у кого есть ссылка на сайт, может просматривать и изменять склад. Регулярно сохраняйте резервные копии.', saveError:'Не удалось сохранить товар. Попробуйте ещё раз.',
+    sharedNotice:'Любой, у кого есть ссылка на сайт, может просматривать и изменять склад. Регулярно сохраняйте резервные копии.', syncLabel:'Состояние синхронизации', syncSynced:'Синхронизировано', syncLocal:'Только на этом устройстве', syncSaving:'Синхронизация…', syncFailed:'Нет синхронизации', saveError:'Не удалось сохранить товар. Попробуйте ещё раз.',
     storageError:'Память браузера заполнена. Экспортируйте копию и удалите большое фото.',
     productPhoto:'Фото товара', photoTooLarge:'Выберите фото меньшего размера для надёжного просмотра на телефоне.', addNewDate:'Записать новый срок годности',
     dateRequired:'Укажите срок годности.', saveChanges:'Сохранить изменения', product:'Товар', optional:'Необязательно',
@@ -347,7 +347,7 @@ function App(){
     </aside>
     {mobileMenu&&<button type="button" className="sidebar-scrim" onClick={()=>setMobileMenu(false)} aria-label={t.close}/>}
     <main className="main">
-      <header className="topbar"><div className="topbar-context"><button className="icon-btn mobile-toggle" onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"><Menu/></button><div className="breadcrumb">{t.productCatalog}<span>/</span><b>{view==='detail'?selectedProduct?.name||t.details:view==='inventory'?t.inventory:t.expirySummary}</b></div></div><button type="button" className="topbar-home" onClick={goHome} aria-label={`${t.app} — ${t.inventory}`} title={t.inventory}><span className="brand-mark"><img src="./bottletrack-icon.svg" alt=""/></span><span className="topbar-brand-text"><strong>{t.app}</strong></span></button><div className="top-actions"><span className={`storage-dot ${syncStatus==='error'||storageError?'sync-error':''}`}></span><span className="storage-label">{storageError?t.storageError:syncStatus==='loading'?t.syncLoading:syncStatus==='shared'?t.sharedInventory:syncStatus==='error'?t.syncError:t.localOnly}</span>{!isInstalled&&<button className="button secondary install-button" onClick={addToDevice} aria-label={t.installApp} title={t.installApp}><Download size={16}/><span>{t.installApp}</span></button>}<button className="button primary top-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div></header>
+      <header className="topbar"><div className="topbar-context"><button className="icon-btn mobile-toggle" onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"><Menu/></button><div className="breadcrumb">{t.productCatalog}<span>/</span><b>{view==='detail'?selectedProduct?.name||t.details:view==='inventory'?t.inventory:t.expirySummary}</b></div></div><button type="button" className="topbar-home" onClick={goHome} aria-label={`${t.app} — ${t.inventory}`} title={t.inventory}><span className="brand-mark"><img src="./bottletrack-icon.svg" alt=""/></span><span className="topbar-brand-text"><strong>{t.app}</strong></span></button><div className="top-actions"><span className={`sync-indicator sync-indicator-${storageError||syncStatus==='error'?'error':syncStatus==='loading'?'loading':syncStatus==='shared'?'shared':'local'}`} role="status" aria-live="polite" aria-label={`${t.syncLabel}: ${storageError||syncStatus==='error'?t.syncFailed:syncStatus==='loading'?t.syncSaving:syncStatus==='shared'?t.syncSynced:t.syncLocal}`} title={`${t.syncLabel}: ${storageError||syncStatus==='error'?t.syncFailed:syncStatus==='loading'?t.syncSaving:syncStatus==='shared'?t.syncSynced:t.syncLocal}`}>{storageError||syncStatus==='error'?<CloudOff size={17}/>:syncStatus==='loading'?<LoaderCircle size={17}/>:syncStatus==='shared'?<Cloud size={17}/>:<CloudOff size={17}/>}<span className="storage-label">{storageError?t.syncFailed:syncStatus==='loading'?t.syncSaving:syncStatus==='shared'?t.syncSynced:t.syncLocal}</span></span>{!isInstalled&&<button className="button secondary install-button" onClick={addToDevice} aria-label={t.installApp} title={t.installApp}><Download size={16}/><span>{t.installApp}</span></button>}<button className="button primary top-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div></header>
       {view==='detail'&&selectedProduct ? <section className="content detail-content">
         <button className="back-link" onClick={goInventory}>← {t.back}</button>
         <div className="detail-header"><div className="detail-identity">{isDisplayableProductPhoto(selectedProduct.photo)?<img className="detail-photo" src={selectedProduct.photo} alt={selectedProduct.name}/>:<div className="detail-photo placeholder"><Wine size={34}/></div>}<div><div className="eyebrow">{t.details}</div><h1>{selectedProduct.name}</h1>{selectedProduct.size&&<span className="product-size-label">{sizeLabel(selectedProduct.size,t)}</span>}<div className="subline"><Barcode size={15}/>{selectedProduct.barcode||t.noBarcode}</div></div></div><div className="detail-actions"><button className="button secondary" onClick={()=>openEdit(selectedProduct)}><Pencil size={16}/>{t.edit}</button><button className="button primary" onClick={()=>{setLotForm({expiry:''});setModal('lot')}}><Plus size={17}/>{t.addLot}</button></div></div>

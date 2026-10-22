@@ -92,6 +92,18 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 .lang-picker .theme-toggle:hover{background:#214437;border-color:#75a887}
 .lang-select-wrap{position:relative;display:flex;align-items:center;flex:1;min-width:0}
 .lang-picker .lang-select-wrap select{width:100%;padding-inline:11px 34px}
+.sync-indicator{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;color:#287448}
+.sync-indicator-local{color:#7c8981}
+.sync-indicator-error{color:#b24239}
+.sync-indicator-loading{color:#a66b0f}
+.sync-indicator-loading svg{animation:sync-spin 1.2s linear infinite}
+@keyframes sync-spin{to{transform:rotate(360deg)}}
+.sync-indicator .storage-label{display:inline;font-size:10px;color:inherit;margin:0;white-space:nowrap}
+@media(max-width:1120px){.sync-indicator .storage-label{display:none}}
+@media(max-width:600px){.sync-indicator{width:36px;height:36px;border:1px solid currentColor;border-radius:10px;background:#fff;}
+  :root[data-theme="dark"] .sync-indicator{background:#17263d}
+  .top-actions{gap:5px}.topbar{padding-inline:8px}.top-add{padding-inline:9px}}
+@media (display-mode:standalone){.topbar{background:var(--surface,#fff)}}
 .lang-select-wrap .lang-chevron{position:absolute;inset-inline-end:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:#c1d7c8}
 :root[data-theme="dark"]{color-scheme:dark;color:#e5eee8;background:#111a16;--green:#63ae82;--green-dark:#194431;--mint:#20392c;--line:#2c3a32;--muted:#9aa9a0;--amber:#e4b763;--red:#e18a82}
 :root[data-theme="dark"] body,:root[data-theme="dark"] .app,:root[data-theme="dark"] .main{background:#111a16;color:#e5eee8}
