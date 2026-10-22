@@ -25,18 +25,13 @@ export function normalizeDatabase(value) {
 }
 
 export function createProduct(form, { id, lotId, now }) {
-  const name = String(form?.name ?? '').trim();
-  if (!name) throw new Error('Product name is required.');
+  const fields = requiredProductFields(form);
   const stamp = now();
-  const expiry = String(form.expiry ?? '').trim();
-  const lots = expiry ? [{ id: lotId(), expiry, createdAt: stamp }] : [];
+  const lots = [{ id: lotId(), expiry: fields.expiry, createdAt: stamp }];
 
   return {
     id: id(),
-    barcode: String(form.barcode ?? '').trim(),
-    name,
-    size: String(form.size ?? ''),
-    photo: form.photo || '',
+    ...fields,
     lots,
     createdAt: stamp,
     updatedAt: stamp,
@@ -44,20 +39,31 @@ export function createProduct(form, { id, lotId, now }) {
 }
 
 export function updateProduct(existing, form, { now, lotId }) {
-  const name = String(form?.name ?? '').trim();
-  if (!name) throw new Error('Product name is required.');
+  const fields = requiredProductFields(form, existing.photo);
   const stamp = now();
   const lots = [...(existing.lots || [])];
-  const expiry = String(form.expiry ?? '').trim();
-  if (expiry) lots.unshift({ id: lotId(), expiry, createdAt: stamp });
+  if (!lots.some(lot => lot.expiry === fields.expiry)) lots.unshift({ id: lotId(), expiry: fields.expiry, createdAt: stamp });
 
   return {
     ...existing,
-    name,
-    size: String(form.size ?? existing.size ?? ''),
-    barcode: String(form.barcode ?? '').trim(),
-    photo: form.photo ?? existing.photo ?? '',
+    ...fields,
     lots,
     updatedAt: stamp,
   };
+}
+
+function requiredProductFields(form, fallbackPhoto = '') {
+  const fields = {
+    barcode: String(form?.barcode ?? '').trim(),
+    name: String(form?.name ?? '').trim(),
+    size: String(form?.size ?? '').trim(),
+    expiry: String(form?.expiry ?? '').trim(),
+    photo: String(form?.photo ?? fallbackPhoto ?? ''),
+  };
+  if (!fields.barcode) throw new Error('Product barcode is required.');
+  if (!fields.name) throw new Error('Product name is required.');
+  if (!fields.size) throw new Error('Bottle size is required.');
+  if (!fields.expiry) throw new Error('Expiration date is required.');
+  if (!fields.photo) throw new Error('Product photo is required.');
+  return fields;
 }
