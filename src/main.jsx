@@ -162,6 +162,7 @@ function App(){
   const [isInstalled,setIsInstalled]=useState(false);
   const [scanValue,setScanValue]=useState('');
   const [photoProcessing,setPhotoProcessing]=useState(false);
+  const [savingProduct,setSavingProduct]=useState(false);
   const [scanError,setScanError]=useState('');
   const [cameraOn,setCameraOn]=useState(false);
   const [form,setForm]=useState(null);
@@ -169,6 +170,12 @@ function App(){
   const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), lastSyncedJson=useRef(null), pendingLocalWrite=useRef(false), localChangesDuringSync=useRef(false), dbRef=useRef(db);
   dbRef.current=db;
   const t=messages[lang]||messages.en, rtl=lang==='he';
+  const SyncIndicator=({className=''})=>{
+    const state=storageError||syncStatus==='error'?'error':syncStatus==='loading'?'loading':syncStatus==='shared'?'shared':'local';
+    const label=state==='error'?t.syncFailed:state==='loading'?t.syncSaving:state==='shared'?t.syncSynced:t.syncLocal;
+    const Icon=state==='error'||state==='local'?CloudOff:state==='loading'?LoaderCircle:Cloud;
+    return <span className={`sync-indicator sync-indicator-${state} ${className}`} role="status" aria-live="polite" aria-label={`${t.syncLabel}: ${label}`} title={`${t.syncLabel}: ${label}`}><Icon size={17}/><span className="storage-label">{label}</span></span>;
+  };
   useEffect(()=>{ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db));setStorageError(false);}catch(error){console.error('Could not save local inventory:',error);setStorageError(true);} },[db]);
   useEffect(()=>{localStorage.setItem(LANG_KEY,lang); document.documentElement.lang=lang;document.documentElement.dir=rtl?'rtl':'ltr';},[lang,rtl]);
   useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem(THEME_KEY,theme);},[theme]);
@@ -235,7 +242,8 @@ function App(){
   const soonCount=enriched.filter(p=>p.nextLot&&statusFor(p.nextLot.expiry)==='soon').length;
   const expiredCount=enriched.filter(p=>p.nextLot&&statusFor(p.nextLot.expiry)==='expired').length;
   const selectMetricFilter=value=>{setFilter(value);setView('inventory');setMobileMenu(false)};
-  const log=(type,product,detail='')=>setDb(prev=>({...prev,activity:[{id:uid(),type,product:product?.name||'',barcode:product?.barcode||'',detail,at:new Date().toISOString()},...(prev.activity||[])].slice(0,100)}));
+  const activityEntry=(type,product,detail='')=>({id:uid(),type,product:product?.name||'',barcode:product?.barcode||'',detail,at:new Date().toISOString()});
+  const log=(type,product,detail='')=>setDb(prev=>({...prev,activity:[activityEntry(type,product,detail),...(prev.activity||[])].slice(0,100)}));
   const notify=s=>{setToast(s);setToastUndo(false);setDeletedProduct(null)};
   function stopCamera(){
     scanLoop.current=false;
@@ -295,20 +303,36 @@ function App(){
   function newProductForm(barcode=''){return {id:null,barcode,name:'',size:'',photo:'',expiry:''};}
   function openNew(){setPhotoProcessing(false);setForm(newProductForm(''));setModal('form');}
   function openEdit(p){setPhotoProcessing(false);const dates=(p.lots||[]).map(lot=>lot.expiry).filter(Boolean).sort();const expiry=p.nextLot?.expiry||dates.find(date=>date>=today())||dates[dates.length-1]||'';setForm({id:p.id,barcode:p.barcode||'',name:p.name||'',size:p.size||'',photo:p.photo||'',expiry});setModal('form');}
-  function saveProduct(e){
-    e?.preventDefault();if(photoProcessing)return;if(!form?.barcode?.trim()){notify(t.barcodeRequired);return;}if(!form?.name?.trim()){notify(t.required);return;}if(!form?.size){notify(t.sizeRequired);return;}if(!form?.expiry){notify(t.dateRequired);return;}if(!form?.photo){notify(t.photoRequired);return;}if(!isDisplayableProductPhoto(form.photo)){notify(t.photoTooLarge);return;}
+  async function saveProduct(e){
+    e?.preventDefault();if(photoProcessing||savingProduct)return;if(!form?.barcode?.trim()){notify(t.barcodeRequired);return;}if(!form?.name?.trim()){notify(t.required);return;}if(!form?.size){notify(t.sizeRequired);return;}if(!form?.expiry){notify(t.dateRequired);return;}if(!form?.photo){notify(t.photoRequired);return;}if(!isDisplayableProductPhoto(form.photo)){notify(t.photoTooLarge);return;}
     try{
-      if(sharedStorageEnabled&&!syncReady)localChangesDuringSync.current=true;
+      setSavingProduct(true);
+      let remoteSaveFailed=false;
+      let waitingForConnection=sharedStorageEnabled&&!lastSyncedJson.current;
+      let localSaveFailed=false;
+      let updated, nextProducts, action;
       if(form?.id){
         const old=products.find(p=>p.id===form.id);if(!old)throw new Error(t.required);
-        const updated=updateProduct(old,form,{now:()=>new Date().toISOString(),lotId:uid});
-        setDb(prev=>({...prev,products:prev.products.map(p=>p.id===form.id?updated:p)}));log('updated',updated);setSelected(updated.id);setView('detail');
+        updated=updateProduct(old,form,{now:()=>new Date().toISOString(),lotId:uid});
+        nextProducts=products.map(p=>p.id===form.id?updated:p);action='updated';
       }else{
-        const p=createProduct(form,{id:uid,lotId:uid,now:()=>new Date().toISOString()});
-        setDb(prev=>({...prev,products:[p,...prev.products]}));log('created',p);setSelected(p.id);setView('detail');
+        updated=createProduct(form,{id:uid,lotId:uid,now:()=>new Date().toISOString()});
+        nextProducts=[updated,...products];action='created';
       }
+      const nextDb={...db,products:nextProducts,activity:[activityEntry(action,updated),...(db.activity||[])].slice(0,100)};
+      if(sharedStorageEnabled&&!lastSyncedJson.current)localChangesDuringSync.current=true;
+      setDb(nextDb);
+      try{localStorage.setItem(STORAGE_KEY,JSON.stringify(nextDb));setStorageError(false)}catch(error){console.error('Could not save local inventory:',error);setStorageError(true);localSaveFailed=true}
+      setSelected(updated.id);setView('detail');setModal(null);
+      if(sharedStorageEnabled&&lastSyncedJson.current){
+        pendingLocalWrite.current=true;
+        try{await saveSharedDatabase(nextDb);lastSyncedJson.current=JSON.stringify(nextDb);setSyncStatus('shared')}
+        catch(error){console.error('Could not confirm shared product save:',error);setSyncStatus('error');remoteSaveFailed=true}
+        finally{pendingLocalWrite.current=false}
+      }
+      notify(localSaveFailed?t.storageError:remoteSaveFailed||waitingForConnection?t.syncError:t.productSaved);
     }catch(error){console.error('Could not save product:',error);notify(t.saveError);return;}
-    setModal(null);notify(t.productSaved);
+    finally{setSavingProduct(false)}
   }
   function addLot(e){
     e?.preventDefault();if(!lotForm.expiry){notify(t.dateRequired);return;}
@@ -347,7 +371,7 @@ function App(){
     </aside>
     {mobileMenu&&<button type="button" className="sidebar-scrim" onClick={()=>setMobileMenu(false)} aria-label={t.close}/>}
     <main className="main">
-      <header className="topbar"><div className="topbar-context"><button className="icon-btn mobile-toggle" onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"><Menu/></button><div className="breadcrumb">{t.productCatalog}<span>/</span><b>{view==='detail'?selectedProduct?.name||t.details:view==='inventory'?t.inventory:t.expirySummary}</b></div></div><button type="button" className="topbar-home" onClick={goHome} aria-label={`${t.app} — ${t.inventory}`} title={t.inventory}><span className="brand-mark"><img src="./bottletrack-icon.svg" alt=""/></span><span className="topbar-brand-text"><strong>{t.app}</strong></span></button><div className="top-actions"><span className={`sync-indicator sync-indicator-${storageError||syncStatus==='error'?'error':syncStatus==='loading'?'loading':syncStatus==='shared'?'shared':'local'}`} role="status" aria-live="polite" aria-label={`${t.syncLabel}: ${storageError||syncStatus==='error'?t.syncFailed:syncStatus==='loading'?t.syncSaving:syncStatus==='shared'?t.syncSynced:t.syncLocal}`} title={`${t.syncLabel}: ${storageError||syncStatus==='error'?t.syncFailed:syncStatus==='loading'?t.syncSaving:syncStatus==='shared'?t.syncSynced:t.syncLocal}`}>{storageError||syncStatus==='error'?<CloudOff size={17}/>:syncStatus==='loading'?<LoaderCircle size={17}/>:syncStatus==='shared'?<Cloud size={17}/>:<CloudOff size={17}/>}<span className="storage-label">{storageError?t.syncFailed:syncStatus==='loading'?t.syncSaving:syncStatus==='shared'?t.syncSynced:t.syncLocal}</span></span>{!isInstalled&&<button className="button secondary install-button" onClick={addToDevice} aria-label={t.installApp} title={t.installApp}><Download size={16}/><span>{t.installApp}</span></button>}<button className="button primary top-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div></header>
+      <header className="topbar"><div className="topbar-context"><SyncIndicator className="mobile-sync"/><button className="icon-btn mobile-toggle" onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"><Menu/></button><div className="breadcrumb">{t.productCatalog}<span>/</span><b>{view==='detail'?selectedProduct?.name||t.details:view==='inventory'?t.inventory:t.expirySummary}</b></div></div><button type="button" className="topbar-home" onClick={goHome} aria-label={`${t.app} — ${t.inventory}`} title={t.inventory}><span className="brand-mark"><img src="./bottletrack-icon.svg" alt=""/></span><span className="topbar-brand-text"><strong>{t.app}</strong></span></button><div className="top-actions"><SyncIndicator className="desktop-sync"/>{!isInstalled&&<button className="button secondary install-button" onClick={addToDevice} aria-label={t.installApp} title={t.installApp}><Download size={16}/><span>{t.installApp}</span></button>}<button className="button primary top-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div></header>
       {view==='detail'&&selectedProduct ? <section className="content detail-content">
         <button className="back-link" onClick={goInventory}>← {t.back}</button>
         <div className="detail-header"><div className="detail-identity">{isDisplayableProductPhoto(selectedProduct.photo)?<img className="detail-photo" src={selectedProduct.photo} alt={selectedProduct.name}/>:<div className="detail-photo placeholder"><Wine size={34}/></div>}<div><div className="eyebrow">{t.details}</div><h1>{selectedProduct.name}</h1>{selectedProduct.size&&<span className="product-size-label">{sizeLabel(selectedProduct.size,t)}</span>}<div className="subline"><Barcode size={15}/>{selectedProduct.barcode||t.noBarcode}</div></div></div><div className="detail-actions"><button className="button secondary" onClick={()=>openEdit(selectedProduct)}><Pencil size={16}/>{t.edit}</button><button className="button primary" onClick={()=>{setLotForm({expiry:''});setModal('lot')}}><Plus size={17}/>{t.addLot}</button></div></div>
@@ -376,7 +400,7 @@ function App(){
     {modal==='form'&&form&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&!photoProcessing&&setModal(null)}><div className="modal form-modal"><div className="modal-heading"><div><div className="eyebrow">{form.id?t.editProduct:t.newProduct}</div><h2>{form.id?t.editProduct:t.add}</h2></div><button className="icon-btn" disabled={photoProcessing} onClick={()=>setModal(null)}><X/></button></div><form onSubmit={saveProduct}><div className="form-grid"><label className="field full"><span>{t.barcode} *</span><div className="barcode-input"><Barcode size={18}/><input required value={form.barcode} onChange={e=>setForm({...form,barcode:e.target.value})} placeholder="7290000000000"/><button type="button" onClick={()=>{setModal('scanner');setScanValue(form.barcode||'')}} title={t.scan}><Camera size={17}/></button></div></label><label className="field full"><span>{t.name} *</span><input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder={t.name}/></label><div className="field full size-field"><span>{t.size} *</span><div className="size-options" role="group" aria-label={t.size} aria-required="true">{[['330ml',t.size330],['500ml',t.size500],['750ml',t.size750],['1.5l',t.size1500],['can',t.sizeCan],['500ml-can',t.size500Can]].map(([value,label])=><button key={value} type="button" className={form.size===value?'selected':''} aria-pressed={form.size===value} onClick={()=>setForm(current=>({...current,size:current.size===value?'':value}))}>{label}</button>)}</div></div>
         <label className="field"><span>{t.expiry} *</span><input required type="date" value={form.expiry} onChange={e=>setForm({...form,expiry:e.target.value})}/></label>
         <div className="field full" aria-required="true"><span>{t.photo} *</span><div className="photo-upload">{form.photo&&isDisplayableProductPhoto(form.photo)?<><img src={form.photo} alt={t.productPhoto}/><div><b>{t.productPhoto}</b><button type="button" className="text-button" onClick={()=>fileRef.current?.click()}>{t.changePhoto}</button><button type="button" className="text-button danger-text" onClick={()=>setForm({...form,photo:''})}>{t.removePhoto}</button></div></>:form.photo?<><div className="upload-placeholder"><Wine size={22}/><span>{t.photoTooLarge}</span></div><div><button type="button" className="text-button" onClick={()=>fileRef.current?.click()}>{t.changePhoto}</button><button type="button" className="text-button danger-text" onClick={()=>setForm({...form,photo:''})}>{t.removePhoto}</button></div></>:<button type="button" className="upload-placeholder" onClick={()=>fileRef.current?.click()}><ImagePlus size={22}/><span>{t.selectPhoto}</span></button>}<input ref={fileRef} hidden type="file" accept="image/*" capture="environment" onChange={photoChange}/></div></div>
-      </div><div className="modal-footer"><button type="button" className="button secondary" onClick={()=>setModal(null)} disabled={photoProcessing}>{t.cancel}</button><button type="submit" className="button primary" disabled={photoProcessing}><Save size={16}/>{photoProcessing?t.photoProcessing:form.id?t.saveChanges:t.save}</button></div></form></div></div>}
+      </div><div className="modal-footer"><button type="button" className="button secondary" onClick={()=>setModal(null)} disabled={photoProcessing||savingProduct}>{t.cancel}</button><button type="submit" className="button primary" disabled={photoProcessing||savingProduct}><Save size={16}/>{photoProcessing?t.photoProcessing:savingProduct?t.syncSaving:form.id?t.saveChanges:t.save}</button></div></form></div></div>}
     {modal==='lot'&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setModal(null)}><div className="modal lot-modal"><div className="modal-heading"><div><div className="eyebrow">{selectedProduct?.name}</div><h2>{t.addNewDate}</h2></div><button className="icon-btn" onClick={()=>setModal(null)}><X/></button></div><form onSubmit={addLot}><label className="field"><span>{t.expiry} *</span><input required type="date" value={lotForm.expiry} onChange={e=>setLotForm({...lotForm,expiry:e.target.value})}/></label><div className="modal-footer"><button type="button" className="button secondary" onClick={()=>setModal(null)}>{t.cancel}</button><button className="button primary" type="submit"><Save size={16}/>{t.saveLot}</button></div></form></div></div>}
     {modal==='scanner'&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&(stopCamera(),setModal(null))}><div className="modal scanner-modal"><div className="modal-heading"><div><div className="eyebrow">{t.inventory}</div><h2><ScanLine size={22}/>{t.scanTitle}</h2></div><button className="icon-btn" onClick={()=>{stopCamera();setModal(null)}}><X/></button></div><p className="modal-description">{t.scanHint}</p><div className="scanner-view">{cameraOn?<><video ref={videoRef} muted playsInline/><div className="scan-frame"><span className="scan-angle"></span></div></>:<div className="scanner-placeholder"><Camera size={36}/><span>{t.cameraPermission}</span></div>}</div>{scanError&&<div className="inline-error">{scanError}</div>}<button className="button secondary camera-button" onClick={cameraOn?stopCamera:startCamera}><Camera size={17}/>{cameraOn?t.cancel:t.scan}</button><div className="manual-entry"><label className="field"><span>{t.manual}</span><input value={scanValue} onChange={e=>setScanValue(e.target.value)} onKeyDown={e=>e.key==='Enter'&&(stopCamera(),handleBarcode(scanValue))} placeholder="7290000000000"/></label><button className="button primary" onClick={()=>{stopCamera();handleBarcode(scanValue)}}>{t.useBarcode}</button></div></div></div>}
     {toast&&<div className="toast"><CheckCircle2 size={17}/>{toast}{toastUndo&&<button className="toast-undo" onClick={undoDelete}>{t.undo}</button>}</div>}
