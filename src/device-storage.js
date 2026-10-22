@@ -27,12 +27,12 @@ function openDatabase() {
   }).catch(error => { opening = null; throw error; });
   return opening;
 }
-async function indexedTransaction(mode, value) {
+async function indexedTransaction(mode, value, key = DATABASE_KEY, remove = false) {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction('inventory', mode);
     const store = transaction.objectStore('inventory');
-    const request = mode === 'readonly' ? store.get(DATABASE_KEY) : store.put(value, DATABASE_KEY);
+    const request = mode === 'readonly' ? store.get(key) : remove ? store.delete(key) : store.put(value, key);
     const timer = setTimeout(() => { try { transaction.abort(); } catch {} reject(new Error('Device save timed out')); }, 5000);
     transaction.oncomplete = () => { clearTimeout(timer); resolve(request.result); };
     transaction.onabort = transaction.onerror = () => { clearTimeout(timer); reject(transaction.error || new Error('Device save failed')); };
@@ -61,3 +61,24 @@ export function createDeviceStorage({ getStorage = () => globalThis.localStorage
   };
 }
 export const deviceStorage = createDeviceStorage();
+
+let metadataRevision = 0;
+export const deviceMetadata = {
+  async get(key) {
+    let indexed = null, fallback = null;
+    try { indexed = await indexedTransaction('readonly', undefined, key); } catch {}
+    try { fallback = JSON.parse(globalThis.localStorage?.getItem(key) || 'null'); } catch {}
+    const value = (fallback?.metadataRevision || 0) > (indexed?.metadataRevision || 0) ? fallback : indexed ?? fallback;
+    return value?.metadataRevision ? value.data : value;
+  },
+  async set(key, value) {
+    metadataRevision = Math.max(Date.now(), metadataRevision + 1);
+    const envelope = { metadataRevision, data: value };
+    try { await indexedTransaction('readwrite', envelope, key); return true; } catch {}
+    try { if (!globalThis.localStorage) return false; globalThis.localStorage.setItem(key, JSON.stringify(envelope)); return true; } catch { return false; }
+  },
+  async remove(key) {
+    try { await indexedTransaction('readwrite', undefined, key, true); } catch {}
+    try { globalThis.localStorage?.removeItem(key); } catch {}
+  },
+};

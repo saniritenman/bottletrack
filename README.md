@@ -42,3 +42,11 @@ The included GitHub Actions workflow builds the Vite app and deploys `dist/` to 
 
 Use **Export JSON** to download the current inventory. **Import JSON** replaces the shared inventory when shared storage is configured, or the local browser inventory otherwise. Keep a copy of the backup before importing.
 
+The **Automatic backups** panel keeps up to 14 dated copies on the current device. While the app is open, changed inventories are captured at most once every 30 minutes, with a new daily copy even if unchanged. A manual backup can be created at any time. Restoring a copy first saves the current inventory, then replaces the displayed inventory and queues the restored changes for shared sync. These device backups are not a separate cloud backup; export JSON to retain a copy outside the browser.
+
+## Daily workflow
+
+- **Pending uploads** shows new products, edits, and deletions waiting for server confirmation, including failed requests and **Retry all**. The confirmed baseline is retained on the device so the pending list can be rebuilt after a reload.
+- **Expiry reminders** filters products expiring within 7, 14, or 30 calendar days, including today. Products within seven days are highlighted. These are reminders inside the app, without background push notifications.
+- Enable **Keep scanning** in the barcode scanner. After a barcode opens the product form and the product is saved on the device, the scanner resumes automatically while uploads continue in the background. The camera is released between forms so the product-photo camera can be used. Held barcodes are suppressed until moved away; **Finish scanning** ends the session.
+
