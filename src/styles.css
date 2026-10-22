@@ -101,7 +101,7 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 .sync-indicator .storage-label{display:inline;font-size:10px;color:inherit;margin:0;white-space:nowrap}
 .mobile-sync{display:none}
 @media(max-width:1120px){.sync-indicator .storage-label{display:none}}
-@media(max-width:600px){.mobile-sync{display:inline-flex}.desktop-sync{display:none}.sync-indicator{width:36px;height:36px;border:1px solid currentColor;border-radius:10px;background:#fff;}
+@media(max-width:600px){.mobile-sync{display:inline-flex;order:1}.mobile-toggle{order:0}.desktop-sync{display:none}.sync-indicator{width:36px;height:36px;border:1px solid currentColor;border-radius:10px;background:#fff;}
   :root[data-theme="dark"] .sync-indicator{background:#17263d}
   .top-actions{gap:5px}.topbar{padding-inline:8px}.top-add{padding-inline:9px}}
 @media (display-mode:standalone){.topbar{background:var(--surface,#fff)}}
