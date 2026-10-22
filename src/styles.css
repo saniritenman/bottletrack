@@ -131,6 +131,17 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 :root[data-theme="dark"] .button.danger:hover{background:#db5a55}
 :root[data-theme="dark"] .delete-confirm-product{border-color:#563a3a;background:#302528;color:#f0e6e6}
 :root[data-theme="dark"] .delete-confirm-icon{background:#4c2e30;color:#ffaaa3}
+.size-options{display:flex;flex-wrap:wrap;gap:8px}
+.size-options button{min-height:40px;padding:8px 14px;border:1px solid #d6e1eb;border-radius:10px;background:#fff;color:#40566c;font-size:13px;font-weight:700;transition:background .16s,border-color .16s,color .16s,box-shadow .16s}
+.size-options button:hover{border-color:#8bb9e5;background:#f3f8fd}
+.size-options button.selected{border-color:#2878c5;background:#e8f3ff;color:#155897;box-shadow:0 0 0 2px #2878c51c}
+.product-main .product-size-label,.product-size-label{display:table;width:max-content;max-width:100%;margin-top:5px;padding:2px 7px;border-radius:6px;background:#e8f3ff;color:#155897;font-size:10px;font-weight:700;line-height:1.45}
+.product-main .product-barcode{margin-top:4px}
+.detail-identity .product-size-label{margin-top:6px}
+:root[data-theme="dark"] .size-options button{border-color:#3b5574;background:#1b2e45;color:#cbd9e9}
+:root[data-theme="dark"] .size-options button:hover{border-color:#6697c9;background:#203a56}
+:root[data-theme="dark"] .size-options button.selected{border-color:#5da9f2;background:#203a56;color:#b6d8f8;box-shadow:0 0 0 2px #5da9f226}
+:root[data-theme="dark"] .product-main .product-size-label,:root[data-theme="dark"] .product-size-label{background:#203a56;color:#b6d8f8}
 .status.status-ok{background:#e4f4e8!important;color:#267543!important;border:1px solid #cce8d4}
 :root[data-theme="dark"] .status.status-ok{background:#1e4933!important;color:#9be2b0!important;border-color:#2f6847}
 :root[data-theme="dark"] .metric-icon-window span{border-color:#19241e;background:#a66b0f;color:#fff}

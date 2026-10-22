@@ -10,6 +10,7 @@ export function normalizeDatabase(value) {
         .map(product => ({
           ...product,
           name: typeof product.name === 'string' ? product.name : '',
+          size: typeof product.size === 'string' ? product.size : '',
           barcode: product.barcode == null ? '' : String(product.barcode),
           photo: typeof product.photo === 'string' ? product.photo : '',
           createdAt: typeof product.createdAt === 'string' ? product.createdAt : '',
@@ -34,6 +35,7 @@ export function createProduct(form, { id, lotId, now }) {
     id: id(),
     barcode: String(form.barcode ?? '').trim(),
     name,
+    size: String(form.size ?? ''),
     photo: form.photo || '',
     lots,
     createdAt: stamp,
@@ -52,6 +54,7 @@ export function updateProduct(existing, form, { now, lotId }) {
   return {
     ...existing,
     name,
+    size: String(form.size ?? existing.size ?? ''),
     barcode: String(form.barcode ?? '').trim(),
     photo: form.photo ?? existing.photo ?? '',
     lots,
