@@ -24,6 +24,33 @@ export function normalizeDatabase(value) {
   return { products, activity: Array.isArray(value?.activity) ? value.activity : [] };
 }
 
+export function mergeDatabases(localValue, sharedValue) {
+  const local = normalizeDatabase(localValue);
+  const shared = normalizeDatabase(sharedValue);
+  const activity = [...new Map([...shared.activity, ...local.activity].map(item => [
+    item?.id || `${item?.type || ''}|${item?.barcode || ''}|${item?.at || ''}|${item?.detail || ''}`,
+    item,
+  ])).values()].sort((a, b) => (b?.at || '').localeCompare(a?.at || '')).slice(0, 100);
+  const sharedProducts = new Map(shared.products.map(product => [product.id, product]));
+  const sharedDeletes = new Map();
+  for (const item of shared.activity) {
+    if (item?.type !== 'deleted' || !item.barcode) continue;
+    const previous = sharedDeletes.get(item.barcode) || '';
+    if ((item.at || '') > previous) sharedDeletes.set(item.barcode, item.at || '');
+  }
+  for (const product of local.products) {
+    const existing = sharedProducts.get(product.id);
+    if (existing) {
+      if ((product.updatedAt || product.createdAt || '') > (existing.updatedAt || existing.createdAt || '')) sharedProducts.set(product.id, product);
+      continue;
+    }
+    const productDate = product.updatedAt || product.createdAt || '';
+    if ((sharedDeletes.get(product.barcode) || '') >= productDate) continue;
+    sharedProducts.set(product.id, product);
+  }
+  return { products: [...sharedProducts.values()], activity };
+}
+
 export function createProduct(form, { id, lotId, now }) {
   const fields = requiredProductFields(form);
   const stamp = now();

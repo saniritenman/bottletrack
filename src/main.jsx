@@ -7,7 +7,7 @@ import {
   Save, ScanLine, CircleHelp, RotateCcw, ArrowUpRight, Moon, Sun
 } from 'lucide-react';
 import './styles.css';
-import { createProduct, normalizeDatabase, updateProduct } from './product-model.js';
+import { createProduct, mergeDatabases, normalizeDatabase, updateProduct } from './product-model.js';
 import { fetchSharedDatabase, initializeSharedDatabase, saveSharedDatabase, sharedStorageEnabled } from './shared-storage.js';
 import { compressProductPhoto, isDisplayableProductPhoto } from './photo-utils.js';
 
@@ -155,6 +155,7 @@ function App(){
   const [duplicateProduct,setDuplicateProduct]=useState(null);
   const [syncStatus,setSyncStatus]=useState(sharedStorageEnabled?'loading':'local');
   const [syncReady,setSyncReady]=useState(false);
+  const [syncRetry,setSyncRetry]=useState(0);
   const [storageError,setStorageError]=useState(false);
   const [mobileMenu,setMobileMenu]=useState(false);
   const [installPrompt,setInstallPrompt]=useState(null);
@@ -165,7 +166,8 @@ function App(){
   const [cameraOn,setCameraOn]=useState(false);
   const [form,setForm]=useState(null);
   const [lotForm,setLotForm]=useState({expiry:''});
-  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), lastSyncedJson=useRef(null), pendingLocalWrite=useRef(false);
+  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), lastSyncedJson=useRef(null), pendingLocalWrite=useRef(false), localChangesDuringSync=useRef(false), dbRef=useRef(db);
+  dbRef.current=db;
   const t=messages[lang]||messages.en, rtl=lang==='he';
   useEffect(()=>{ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db));setStorageError(false);}catch(error){console.error('Could not save local inventory:',error);setStorageError(true);} },[db]);
   useEffect(()=>{localStorage.setItem(LANG_KEY,lang); document.documentElement.lang=lang;document.documentElement.dir=rtl?'rtl':'ltr';},[lang,rtl]);
@@ -189,7 +191,9 @@ function App(){
         if(!row){await initializeSharedDatabase(readDB());row=await fetchSharedDatabase();}
         if(row?.data&&Array.isArray(row.data.products)){
           lastSyncedJson.current=JSON.stringify(row.data);
-          if(active){setDb(normalizeDatabase(row.data));setSyncStatus('shared')}
+          const localDb=localChangesDuringSync.current?dbRef.current:readDB();
+          const mergedData=mergeDatabases(localDb,row.data);
+          if(active){setDb(normalizeDatabase(mergedData));setSyncStatus('shared')}
         }else if(active)setSyncStatus('error');
       }catch{if(active)setSyncStatus('error')}
       finally{if(active)setSyncReady(true)}
@@ -197,16 +201,16 @@ function App(){
     return()=>{active=false};
   },[]);
   useEffect(()=>{
-    if(!sharedStorageEnabled||!syncReady||syncStatus!=='shared')return;
+    if(!sharedStorageEnabled||!syncReady||!lastSyncedJson.current||!['shared','error'].includes(syncStatus))return;
     const payload=JSON.stringify(db);
     if(payload===lastSyncedJson.current)return;
     pendingLocalWrite.current=true;
     const timer=setTimeout(async()=>{
       try{await saveSharedDatabase(db);lastSyncedJson.current=payload;pendingLocalWrite.current=false;setSyncStatus('shared')}
-      catch{setSyncStatus('error')}
-    },250);
-    return()=>clearTimeout(timer);
-  },[db,syncReady,syncStatus]);
+      catch{pendingLocalWrite.current=false;setSyncStatus('error');window.setTimeout(()=>setSyncRetry(value=>value+1),3000)}
+    },syncStatus==='error'?3000:250);
+    return()=>{clearTimeout(timer);pendingLocalWrite.current=false};
+  },[db,syncReady,syncStatus,syncRetry]);
   useEffect(()=>{
     if(!sharedStorageEnabled||!syncReady||syncStatus!=='shared')return;
     const timer=setInterval(async()=>{
@@ -294,6 +298,7 @@ function App(){
   function saveProduct(e){
     e?.preventDefault();if(photoProcessing)return;if(!form?.barcode?.trim()){notify(t.barcodeRequired);return;}if(!form?.name?.trim()){notify(t.required);return;}if(!form?.size){notify(t.sizeRequired);return;}if(!form?.expiry){notify(t.dateRequired);return;}if(!form?.photo){notify(t.photoRequired);return;}if(!isDisplayableProductPhoto(form.photo)){notify(t.photoTooLarge);return;}
     try{
+      if(sharedStorageEnabled&&!syncReady)localChangesDuringSync.current=true;
       if(form?.id){
         const old=products.find(p=>p.id===form.id);if(!old)throw new Error(t.required);
         const updated=updateProduct(old,form,{now:()=>new Date().toISOString(),lotId:uid});
@@ -308,6 +313,7 @@ function App(){
   function addLot(e){
     e?.preventDefault();if(!lotForm.expiry){notify(t.dateRequired);return;}
     const p=products.find(x=>x.id===selected);if(!p)return;
+    if(sharedStorageEnabled&&!syncReady)localChangesDuringSync.current=true;
     const lot={id:uid(),expiry:lotForm.expiry,createdAt:new Date().toISOString()};
     const updated={...p,lots:[lot,...(p.lots||[])],updatedAt:new Date().toISOString()};
     setDb(prev=>({...prev,products:prev.products.map(x=>x.id===selected?updated:x)}));log('lot-added',updated,fmtDate(lot.expiry,lang));

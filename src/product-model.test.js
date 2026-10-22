@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createProduct, normalizeDatabase, updateProduct } from './product-model.js';
+import { createProduct, mergeDatabases, normalizeDatabase, updateProduct } from './product-model.js';
 
 const deps = { id: () => 'product-1', lotId: () => 'lot-1', now: () => '2026-10-20T10:00:00.000Z' };
 
@@ -59,4 +59,21 @@ test('requires every product field when creating or updating', () => {
     assert.throws(() => createProduct(incomplete, deps));
     assert.throws(() => updateProduct({ ...complete, id: 'p1', lots: [] }, incomplete, deps));
   }
+});
+
+test('keeps a product saved locally when the shared backup is behind', () => {
+  const localProduct = { id: 'local-1', name: 'Gin', barcode: '123', size: '750ml', photo: 'data:image/png,x', createdAt: '2026-10-22T10:00:00.000Z', updatedAt: '2026-10-22T10:00:00.000Z', lots: [] };
+  const merged = mergeDatabases({ products: [localProduct], activity: [] }, { products: [], activity: [] });
+  assert.deepEqual(merged.products, [localProduct]);
+});
+
+test('uses the newest local edit while preserving a newer shared deletion', () => {
+  const sharedProduct = { id: 'p1', name: 'Gin', barcode: '123', size: '500ml', photo: 'data:image/png,x', createdAt: '2026-10-20T10:00:00.000Z', updatedAt: '2026-10-20T10:00:00.000Z', lots: [] };
+  const localEdit = { ...sharedProduct, name: 'Gin Reserve', updatedAt: '2026-10-22T10:00:00.000Z' };
+  const deletedLocalProduct = { ...sharedProduct, id: 'p2', barcode: '456' };
+  const merged = mergeDatabases(
+    { products: [localEdit, deletedLocalProduct], activity: [] },
+    { products: [sharedProduct], activity: [{ id: 'delete-1', type: 'deleted', barcode: '456', at: '2026-10-21T10:00:00.000Z' }] },
+  );
+  assert.deepEqual(merged.products, [localEdit]);
 });
