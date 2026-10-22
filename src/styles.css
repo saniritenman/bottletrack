@@ -293,3 +293,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 :root[data-theme="dark"] .metric-icon.red{background:#432927;color:#ee9189}
 :root[data-theme="dark"] .lang-picker .theme-toggle{background:#1b3550;border-color:#3a5878;color:#c6e4ff}
 :root[data-theme="dark"] .scan-frame{border-color:#9adfff}
+
+/* Keep the sync retry control consistent with the status indicator. */
+button.sync-indicator{font:inherit;cursor:pointer}
+button.sync-indicator:focus-visible{outline:2px solid #4b91db;outline-offset:3px}

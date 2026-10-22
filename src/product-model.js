@@ -1,6 +1,6 @@
 const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const stamps = value => Object.fromEntries(Object.entries(record(value)).filter(([, stamp]) => typeof stamp === 'string' && Number.isFinite(Date.parse(stamp))));
-const newest = (left, right) => Object.fromEntries([...new Set([...Object.keys(left), ...Object.keys(right)])].map(key => [key, [left[key] || '', right[key] || ''].sort().at(-1)]));
+const newest = (left, right) => Object.fromEntries([...new Set([...Object.keys(left), ...Object.keys(right)])].map(key => [key, (left[key] || '') > (right[key] || '') ? left[key] : right[key]]));
 const productStamp = product => product.updatedAt || product.createdAt || '';
 export function nextChangeStamp(database) {
   const db = normalizeDatabase(database);

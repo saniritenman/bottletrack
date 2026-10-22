@@ -11,17 +11,16 @@ import { createProduct, mergeDatabases, normalizeDatabase, nextChangeStamp, remo
 import * as sharedStorage from './shared-storage.js';
 import { sharedStorageEnabled } from './shared-storage.js';
 import { createInventorySync } from './inventory-sync.js';
+import { deviceStorage, readPreference, writePreference } from './device-storage.js';
 import { compressProductPhoto, compressStoredProductPhotos, isDisplayableProductPhoto } from './photo-utils.js';
 import { startSyncRefresh } from './sync-refresh.js';
 
-const STORAGE_KEY = 'bottletrack.data.v1';
 const LANG_KEY = 'bottletrack.lang';
 const THEME_KEY = 'bottletrack.theme';
 const today = () => { const date=new Date(); return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; };
-const emptyDB = { products: [], activity: [] };
 const messages = {
   en: {
-    app:'BottleTrack', branchLabel:'Bana Mashkaot · Sderot Branch', photoProcessing:'Preparing photo…', tagline:'Your stock. In date. Under control.', overview:'Overview', inventory:'Inventory',
+    app:'BottleTrack', syncRetryHint:'Tap to sync now', branchLabel:'Bana Mashkaot · Sderot Branch', photoProcessing:'Preparing photo…', tagline:'Your stock. In date. Under control.', overview:'Overview', inventory:'Inventory',
     expiring:'Expiring soon', expired:'Expired', products:'Products', tracked:'Tracked products',
     search:'Search name or barcode…', sortBy:'Sort by', sortName:'Name (A–Z)', sortDate:'Expiration date', scan:'Scan barcode', add:'Add product', addLot:'Add expiry date',
     all:'All products', ok:'In date', soon:'Expiring soon', overdue:'Expired', noProducts:'No products yet',
@@ -59,7 +58,7 @@ const messages = {
     installApp:'Add to device', installHelpTitle:'Add BottleTrack to your device', installHelp:'On iPhone or iPad: tap Share, then choose “Add to Home Screen”. On Android: open your browser menu and choose “Install app” or “Add to Home screen”.', within30Days:'≤ 30 days'
   },
   he: {
-    app:'BottleTrack', branchLabel:'בנה משקאות · סניף שדרות', photoProcessing:'מכינים את התמונה…', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
+    app:'BottleTrack', syncRetryHint:'הקישו לסנכרון עכשיו', branchLabel:'בנה משקאות · סניף שדרות', photoProcessing:'מכינים את התמונה…', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
     expiring:'עומדים לפוג', expired:'פגי תוקף', products:'מוצרים', tracked:'מוצרים במעקב',
     search:'חיפוש לפי שם או ברקוד…', sortBy:'מיון לפי', sortName:'שם (א׳–ת׳)', sortDate:'תאריך תפוגה', scan:'סריקת ברקוד', add:'הוספת מוצר', addLot:'הוספת תאריך תפוגה',
     all:'כל המוצרים', ok:'בתוקף', soon:'עומדים לפוג', overdue:'פג תוקף', noProducts:'עדיין אין מוצרים',
@@ -97,7 +96,7 @@ const messages = {
     installApp:'הוספה למכשיר', installHelpTitle:'הוספת BottleTrack למכשיר', installHelp:'ב-iPhone או iPad: הקישו על שיתוף ואז על „הוספה למסך הבית”. ב-Android: פתחו את תפריט הדפדפן ובחרו „התקנת אפליקציה” או „הוספה למסך הבית”.', within30Days:'עד 30 יום'
   },
   ru: {
-    app:'BottleTrack', branchLabel:'Bana Mashkaot · филиал Сдерот', photoProcessing:'Подготовка фото…', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
+    app:'BottleTrack', syncRetryHint:'Нажмите для синхронизации', branchLabel:'Bana Mashkaot · филиал Сдерот', photoProcessing:'Подготовка фото…', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
     expiring:'Скоро истекает', expired:'Просрочено', products:'Товары', tracked:'Товаров отслеживается',
     search:'Поиск по названию или штрихкоду…', sortBy:'Сортировка', sortName:'Название (А–Я)', sortDate:'Срок годности', scan:'Сканировать штрихкод', add:'Добавить товар', addLot:'Добавить срок годности',
     all:'Все товары', ok:'В сроке', soon:'Скоро истекает', overdue:'Просрочено', noProducts:'Пока нет товаров',
@@ -136,7 +135,7 @@ const messages = {
   }
 };
 const uid = () => (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
-const readDB = () => { try { return normalizeDatabase(JSON.parse(localStorage.getItem(STORAGE_KEY))); } catch { return emptyDB; } };
+const readDB = () => deviceStorage.readSmall();
 const daysUntil = d => d ? Math.ceil((new Date(d+'T00:00:00') - new Date(today()+'T00:00:00')) / 86400000) : null;
 const statusFor = d => { const n=daysUntil(d); if(n===null)return 'unknown'; if(n<0)return 'expired'; if(n<=30)return 'soon'; return 'ok'; };
 const fmtDate = (d, lang) => d&&Number.isFinite(Date.parse(d+'T12:00:00')) ? new Intl.DateTimeFormat(lang==='he'?'he-IL':lang==='ru'?'ru-RU':'en-GB',{day:'numeric',month:'short',year:'numeric'}).format(new Date(d+'T12:00:00')) : '—';
@@ -144,8 +143,8 @@ const sizeLabel = (size, t) => ({'330ml':t.size330,'500ml':t.size500,'750ml':t.s
 
 function App(){
   const [db,setDatabase]=useState(readDB);
-  const [lang,setLang]=useState(()=>localStorage.getItem(LANG_KEY)||'he');
-  const [theme,setTheme]=useState(()=>localStorage.getItem(THEME_KEY)==='dark'?'dark':'light');
+  const [lang,setLang]=useState(()=>readPreference(LANG_KEY,'he'));
+  const [theme,setTheme]=useState(()=>readPreference(THEME_KEY,'light')==='dark'?'dark':'light');
   const [query,setQuery]=useState('');
   const [filter,setFilter]=useState('all');
   const [sortBy,setSortBy]=useState('name');
@@ -159,6 +158,8 @@ function App(){
   const [duplicateProduct,setDuplicateProduct]=useState(null);
   const [syncStatus,setSyncStatus]=useState(sharedStorageEnabled?'loading':'local');
   const [storageError,setStorageError]=useState(false);
+  const [deviceReady,setDeviceReady]=useState(false);
+  const [syncErrorDetail,setSyncErrorDetail]=useState('');
   const [mobileMenu,setMobileMenu]=useState(false);
   const [installPrompt,setInstallPrompt]=useState(null);
   const [isInstalled,setIsInstalled]=useState(false);
@@ -169,22 +170,27 @@ function App(){
   const [cameraOn,setCameraOn]=useState(false);
   const [form,setForm]=useState(null);
   const [lotForm,setLotForm]=useState({expiry:''});
-  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), syncRef=useRef(null), dbRef=useRef(db), photoRequestRef=useRef(0);
+  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), syncRef=useRef(null), dbRef=useRef(db), photoRequestRef=useRef(0), localSaveRef=useRef(Promise.resolve(true));
   function setDb(value){
     const next=normalizeDatabase(typeof value==='function'?value(dbRef.current):value);
     dbRef.current=next;
     setDatabase(next);
+    localSaveRef.current=deviceStorage.save(next).then(saved=>{setStorageError(!saved);return saved});
   }
   const t=messages[lang]||messages.en, rtl=lang==='he';
   const SyncIndicator=({className=''})=>{
     const state=storageError||syncStatus==='error'?'error':syncStatus==='loading'?'loading':syncStatus==='shared'?'shared':'local';
     const label=state==='error'?t.syncFailed:state==='loading'?t.syncSaving:state==='shared'?t.syncSynced:t.syncLocal;
     const Icon=state==='error'||state==='local'?CloudOff:state==='loading'?LoaderCircle:Cloud;
-    return <span className={`sync-indicator sync-indicator-${state} ${className}`} role="status" aria-live="polite" aria-label={`${t.syncLabel}: ${label}`} title={`${t.syncLabel}: ${label}`}><Icon size={17}/><span className="storage-label">{label}</span></span>;
+    return <button type="button" className={`sync-indicator sync-indicator-${state} ${className}`} onClick={()=>{void syncRef.current?.refresh()}} aria-label={`${t.syncLabel}: ${label}. ${t.syncRetryHint}`} title={`${t.syncLabel}: ${label}${syncErrorDetail?' — '+syncErrorDetail:''}. ${t.syncRetryHint}`}><Icon size={17}/><span className="storage-label" aria-live="polite">{label}</span></button>;
   };
-  useEffect(()=>{ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db));setStorageError(false);}catch(error){console.error('Could not save local inventory:',error);setStorageError(true);} },[db]);
-  useEffect(()=>{localStorage.setItem(LANG_KEY,lang); document.documentElement.lang=lang;document.documentElement.dir=rtl?'rtl':'ltr';},[lang,rtl]);
-  useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem(THEME_KEY,theme);},[theme]);
+  useEffect(()=>{
+    let active=true;
+    deviceStorage.readLarge().then(cached=>{if(active)setDb(mergeDatabases(dbRef.current,cached))}).finally(()=>{if(active)setDeviceReady(true)});
+    return()=>{active=false};
+  },[]);
+  useEffect(()=>{writePreference(LANG_KEY,lang); document.documentElement.lang=lang;document.documentElement.dir=rtl?'rtl':'ltr';},[lang,rtl]);
+  useEffect(()=>{document.documentElement.dataset.theme=theme;writePreference(THEME_KEY,theme);},[theme]);
   useEffect(()=>{
     const onInstallPrompt=event=>{event.preventDefault();setInstallPrompt(event)};
     const onInstalled=()=>{setIsInstalled(true);setInstallPrompt(null)};
@@ -196,14 +202,14 @@ function App(){
   useEffect(()=>{if(!toast)return;const id=setTimeout(()=>{setToast('');setToastUndo(false);setDeletedProduct(null)},5000);return()=>clearTimeout(id)},[toast]);
   useEffect(()=>()=>stopCamera(),[]);
   useEffect(()=>{
-    if(!sharedStorageEnabled)return;
+    if(!sharedStorageEnabled||!deviceReady)return;
     let active=true, migrated=false;
     const controller=createInventorySync({
       storage:sharedStorage,
       getDatabase:()=>dbRef.current,
       onDatabase:setDb,
-      onStatus:status=>{if(active)setSyncStatus(status)},
-      onError:error=>console.error('Inventory sync failed:',error),
+      onStatus:status=>{if(active){setSyncStatus(status);if(status==='shared')setSyncErrorDetail('')}},
+      onError:error=>{console.error('Inventory sync failed:',error);if(active)setSyncErrorDetail(error.message)},
     });
     syncRef.current=controller;
     const refresh=async()=>{
@@ -221,8 +227,8 @@ function App(){
     };
     const stop=startSyncRefresh(refresh,error=>{console.error('Inventory refresh failed:',error);if(active)setSyncStatus('error')});
     return()=>{active=false;stop();controller.stop();syncRef.current=null};
-  },[]);
-  useEffect(()=>{void syncRef.current?.localChanged()},[db]);
+  },[deviceReady]);
+  useEffect(()=>{if(deviceReady)void syncRef.current?.localChanged()},[db,deviceReady]);
   const products=db.products;
   const enriched=useMemo(()=>products.map(p=>({...p,sortedLots:[...(p.lots||[])].sort((a,b)=>a.expiry.localeCompare(b.expiry)),nextLot:[...(p.lots||[])].filter(x=>x.expiry).sort((a,b)=>a.expiry.localeCompare(b.expiry)).find(x=>x.expiry>=today())||[...(p.lots||[])].filter(x=>x.expiry).sort((a,b)=>a.expiry.localeCompare(b.expiry))[0]})),[products]);
   const filtered=enriched.filter(p=>{
@@ -315,7 +321,7 @@ function App(){
       }
       const nextDb={...db,products:nextProducts,activity:[activityEntry(action,updated),...(db.activity||[])].slice(0,100)};
       setDb(nextDb);
-      try{localStorage.setItem(STORAGE_KEY,JSON.stringify(nextDb));setStorageError(false)}catch(error){console.error('Could not save local inventory:',error);setStorageError(true);localSaveFailed=true}
+      localSaveFailed=!(await localSaveRef.current);
       setSelected(updated.id);setView('detail');setModal(null);
       if(sharedStorageEnabled&&syncRef.current){
         remoteSaveFailed=!(await syncRef.current.localChanged());
@@ -328,7 +334,7 @@ function App(){
     e?.preventDefault();if(!lotForm.expiry){notify(t.dateRequired);return;}
     const p=products.find(x=>x.id===selected);if(!p)return;
     const lot={id:uid(),expiry:lotForm.expiry,createdAt:new Date().toISOString()};
-    const updated={...p,lots:[lot,...(p.lots||[])],updatedAt:new Date().toISOString()};
+    const updated={...p,lots:[lot,...(p.lots||[])],updatedAt:nextChangeStamp(dbRef.current)};
     setDb(prev=>({...prev,products:prev.products.map(x=>x.id===selected?updated:x)}));log('lot-added',updated,fmtDate(lot.expiry,lang));
     setLotForm({expiry:''});setModal(null);notify(t.productSaved);
   }
@@ -338,7 +344,7 @@ function App(){
   function deleteLot(lot){if(!confirm(t.sureDateEntry))return;const p=products.find(x=>x.id===selected);if(!p)return;setDb(prev=>removeExpiry(prev,p.id,lot));}
   function exportJSON(){const blob=new Blob([JSON.stringify({...db,exportedAt:new Date().toISOString(),schemaVersion:1},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`bottletrack-backup-${today()}.json`;a.click();URL.revokeObjectURL(url);}
   function importJSON(e){const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const value=JSON.parse(reader.result);if(!Array.isArray(value.products)||!Array.isArray(value.activity||[]))throw Error();if(confirm(t.overwriteTitle+'\n'+t.overwriteBody)){setDb(prev=>replaceInventory(prev,value));setView('inventory');setSelected(null);notify(t.imported);}}catch{notify(t.invalidFile);}e.target.value='';};reader.readAsText(file);}
-  async function photoChange(e){const input=e.target;const f=input.files?.[0];if(!f)return;const request=++photoRequestRef.current;if(photoProcessing){input.value='';return;}setPhotoProcessing(true);try{const photo=await compressProductPhoto(f);if(request===photoRequestRef.current)setForm(v=>v?{...v,photo}:v);}catch(error){console.error('Could not process product photo:',error);notify(error?.code==='PHOTO_TOO_LARGE'?t.photoTooLarge:t.photoError);}finally{input.value='';if(request===photoRequestRef.current)setPhotoProcessing(false);}}
+  async function photoChange(e){const input=e.target;const f=input.files?.[0];if(!f)return;if(photoProcessing){input.value='';return;}const request=++photoRequestRef.current;setPhotoProcessing(true);try{const photo=await compressProductPhoto(f);if(request===photoRequestRef.current)setForm(v=>v?{...v,photo}:v);}catch(error){console.error('Could not process product photo:',error);notify(error?.code==='PHOTO_TOO_LARGE'?t.photoTooLarge:t.photoError);}finally{input.value='';if(request===photoRequestRef.current)setPhotoProcessing(false);}}
   const selectedProduct=enriched.find(p=>p.id===selected);
   const statusLabel=s=>s==='expired'?t.overdue:s==='soon'?t.soon:s==='ok'?t.ok:t.unknown;
   const StatusPill=({status})=><span className={`status status-${status}`}>{status==='expired'?<AlertTriangle size={13}/>:status==='soon'?<Clock3 size={13}/>:status==='ok'?<CheckCircle2 size={13}/>:<CalendarClock size={13}/>} {statusLabel(status)}</span>;
