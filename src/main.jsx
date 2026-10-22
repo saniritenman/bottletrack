@@ -7,15 +7,17 @@ import {
   Save, ScanLine, CircleHelp, RotateCcw, ArrowUpRight, Moon, Sun, Cloud, CloudOff, LoaderCircle
 } from 'lucide-react';
 import './styles.css';
-import { createProduct, mergeDatabases, normalizeDatabase, updateProduct } from './product-model.js';
-import { fetchSharedDatabase, fetchSharedDatabaseVersion, initializeSharedDatabase, saveSharedDatabase, sharedStorageEnabled } from './shared-storage.js';
+import { createProduct, mergeDatabases, normalizeDatabase, nextChangeStamp, removeProduct, restoreProduct, removeExpiry, replaceInventory, updateProduct } from './product-model.js';
+import * as sharedStorage from './shared-storage.js';
+import { sharedStorageEnabled } from './shared-storage.js';
+import { createInventorySync } from './inventory-sync.js';
 import { compressProductPhoto, compressStoredProductPhotos, isDisplayableProductPhoto } from './photo-utils.js';
 import { startSyncRefresh } from './sync-refresh.js';
 
 const STORAGE_KEY = 'bottletrack.data.v1';
 const LANG_KEY = 'bottletrack.lang';
 const THEME_KEY = 'bottletrack.theme';
-const today = () => new Date().toISOString().slice(0,10);
+const today = () => { const date=new Date(); return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; };
 const emptyDB = { products: [], activity: [] };
 const messages = {
   en: {
@@ -137,11 +139,11 @@ const uid = () => (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.ra
 const readDB = () => { try { return normalizeDatabase(JSON.parse(localStorage.getItem(STORAGE_KEY))); } catch { return emptyDB; } };
 const daysUntil = d => d ? Math.ceil((new Date(d+'T00:00:00') - new Date(today()+'T00:00:00')) / 86400000) : null;
 const statusFor = d => { const n=daysUntil(d); if(n===null)return 'unknown'; if(n<0)return 'expired'; if(n<=30)return 'soon'; return 'ok'; };
-const fmtDate = (d, lang) => d ? new Intl.DateTimeFormat(lang==='he'?'he-IL':lang==='ru'?'ru-RU':'en-GB',{day:'numeric',month:'short',year:'numeric'}).format(new Date(d+'T12:00:00')) : '—';
+const fmtDate = (d, lang) => d&&Number.isFinite(Date.parse(d+'T12:00:00')) ? new Intl.DateTimeFormat(lang==='he'?'he-IL':lang==='ru'?'ru-RU':'en-GB',{day:'numeric',month:'short',year:'numeric'}).format(new Date(d+'T12:00:00')) : '—';
 const sizeLabel = (size, t) => ({'330ml':t.size330,'500ml':t.size500,'750ml':t.size750,'1.5l':t.size1500,can:t.sizeCan,'500ml-can':t.size500Can}[size]||size||'');
 
 function App(){
-  const [db,setDb]=useState(readDB);
+  const [db,setDatabase]=useState(readDB);
   const [lang,setLang]=useState(()=>localStorage.getItem(LANG_KEY)||'he');
   const [theme,setTheme]=useState(()=>localStorage.getItem(THEME_KEY)==='dark'?'dark':'light');
   const [query,setQuery]=useState('');
@@ -156,9 +158,6 @@ function App(){
   const [productToDelete,setProductToDelete]=useState(null);
   const [duplicateProduct,setDuplicateProduct]=useState(null);
   const [syncStatus,setSyncStatus]=useState(sharedStorageEnabled?'loading':'local');
-  const [syncReady,setSyncReady]=useState(false);
-  const [photoMigrationReady,setPhotoMigrationReady]=useState(false);
-  const [syncRetry,setSyncRetry]=useState(0);
   const [storageError,setStorageError]=useState(false);
   const [mobileMenu,setMobileMenu]=useState(false);
   const [installPrompt,setInstallPrompt]=useState(null);
@@ -170,28 +169,13 @@ function App(){
   const [cameraOn,setCameraOn]=useState(false);
   const [form,setForm]=useState(null);
   const [lotForm,setLotForm]=useState({expiry:''});
-  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), lastSyncedJson=useRef(null), lastSharedUpdatedAt=useRef(null), pendingLocalWrite=useRef(false), dbRef=useRef(db);
-  dbRef.current=db;
-  const t=messages[lang]||messages.en, rtl=lang==='he';
-  async function persistSharedDatabase(initialData){
-    let data=normalizeDatabase(initialData);
-    let expectedUpdatedAt=lastSharedUpdatedAt.current;
-    for(let attempt=0;attempt<5;attempt++){
-      if(!expectedUpdatedAt){
-        const latest=await fetchSharedDatabase();
-        if(!latest?.data){await initializeSharedDatabase(data);continue;}
-        data=mergeDatabases(data,latest.data);
-        expectedUpdatedAt=latest.updated_at;
-      }
-      const result=await saveSharedDatabase(data,expectedUpdatedAt);
-      if(result.saved)return {data,updatedAt:result.updatedAt};
-      const latest=await fetchSharedDatabase();
-      if(!latest?.data)throw new Error('Shared inventory changed before this save could finish.');
-      data=mergeDatabases(data,latest.data);
-      expectedUpdatedAt=latest.updated_at;
-    }
-    throw new Error('Shared inventory kept changing; retry this save.');
+  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), syncRef=useRef(null), dbRef=useRef(db), photoRequestRef=useRef(0);
+  function setDb(value){
+    const next=normalizeDatabase(typeof value==='function'?value(dbRef.current):value);
+    dbRef.current=next;
+    setDatabase(next);
   }
+  const t=messages[lang]||messages.en, rtl=lang==='he';
   const SyncIndicator=({className=''})=>{
     const state=storageError||syncStatus==='error'?'error':syncStatus==='loading'?'loading':syncStatus==='shared'?'shared':'local';
     const label=state==='error'?t.syncFailed:state==='loading'?t.syncSaving:state==='shared'?t.syncSynced:t.syncLocal;
@@ -212,77 +196,33 @@ function App(){
   useEffect(()=>{if(!toast)return;const id=setTimeout(()=>{setToast('');setToastUndo(false);setDeletedProduct(null)},5000);return()=>clearTimeout(id)},[toast]);
   useEffect(()=>()=>stopCamera(),[]);
   useEffect(()=>{
-    let active=true;
-    if(!sharedStorageEnabled){setSyncReady(true);setPhotoMigrationReady(true);return()=>{active=false}};
-    (async()=>{
-      try{
-        let row=await fetchSharedDatabase();
-        if(!row){await initializeSharedDatabase(readDB());row=await fetchSharedDatabase();}
-        if(row?.data&&Array.isArray(row.data.products)){
-          lastSyncedJson.current=JSON.stringify(row.data);
-          lastSharedUpdatedAt.current=row.updated_at||null;
-          const localDb=dbRef.current;
-          const mergedData=mergeDatabases(localDb,row.data);
-          if(active){setDb(normalizeDatabase(mergedData));setSyncStatus('shared')}
-          try{
-            const compacted=await compressStoredProductPhotos(mergedData);
-            if(active){
-              const originalPhotos=new Map(mergedData.products.map(product=>[product.id,product.photo]));
-              const compactedPhotos=new Map(compacted.products.map(product=>[product.id,product.photo]));
-              setDb(current=>{
-                let changed=false;
-                const products=current.products.map(product=>{
-                  const smaller=compactedPhotos.get(product.id);
-                  if(product.photo===originalPhotos.get(product.id)&&smaller&&smaller!==product.photo){changed=true;return {...product,photo:smaller}}
-                  return product;
-                });
-                return changed?{...current,products}:current;
-              });
-            }
-          }finally{if(active)setPhotoMigrationReady(true)}
-        }else if(active)setSyncStatus('error');
-      }catch{if(active)setSyncStatus('error')}
-      finally{if(active){setSyncReady(true);setPhotoMigrationReady(true)}}
-    })();
-    return()=>{active=false};
+    if(!sharedStorageEnabled)return;
+    let active=true, migrated=false;
+    const controller=createInventorySync({
+      storage:sharedStorage,
+      getDatabase:()=>dbRef.current,
+      onDatabase:setDb,
+      onStatus:status=>{if(active)setSyncStatus(status)},
+      onError:error=>console.error('Inventory sync failed:',error),
+    });
+    syncRef.current=controller;
+    const refresh=async()=>{
+      const synced=await controller.refresh();
+      if(!active||!synced||migrated)return;
+      migrated=true;
+      const original=dbRef.current;
+      const compacted=await compressStoredProductPhotos(original);
+      if(!active)return;
+      const originals=new Map(original.products.map(product=>[product.id,product.photo]));
+      const photos=new Map(compacted.products.map(product=>[product.id,product.photo]));
+      const stamp=nextChangeStamp(dbRef.current);
+      const products=dbRef.current.products.map(product=>product.photo===originals.get(product.id)&&photos.get(product.id)&&photos.get(product.id)!==product.photo?{...product,photo:photos.get(product.id),updatedAt:stamp}:product);
+      if(products.some((product,index)=>product!==dbRef.current.products[index]))setDb({...dbRef.current,products});
+    };
+    const stop=startSyncRefresh(refresh,error=>{console.error('Inventory refresh failed:',error);if(active)setSyncStatus('error')});
+    return()=>{active=false;stop();controller.stop();syncRef.current=null};
   },[]);
-  useEffect(()=>{
-    if(!sharedStorageEnabled||!syncReady||!photoMigrationReady||!lastSyncedJson.current||pendingLocalWrite.current||!['shared','error'].includes(syncStatus))return;
-    const payload=JSON.stringify(db);
-    if(payload===lastSyncedJson.current)return;
-    pendingLocalWrite.current=true;
-    let started=false;
-    const timer=setTimeout(async()=>{
-      started=true;
-      try{
-        const saved=await persistSharedDatabase(db);
-        lastSharedUpdatedAt.current=saved.updatedAt;
-        lastSyncedJson.current=JSON.stringify(saved.data);
-        setDb(current=>JSON.stringify(current)===payload?saved.data:mergeDatabases(current,saved.data));
-        pendingLocalWrite.current=false;setSyncStatus('shared');
-      }
-      catch{pendingLocalWrite.current=false;setSyncStatus('error');window.setTimeout(()=>setSyncRetry(value=>value+1),3000)}
-    },syncStatus==='error'?3000:250);
-    return()=>{clearTimeout(timer);if(!started)pendingLocalWrite.current=false};
-  },[db,syncReady,photoMigrationReady,syncStatus,syncRetry]);
-  useEffect(()=>{
-    if(!sharedStorageEnabled||!syncReady)return;
-    return startSyncRefresh(async isActive=>{
-      if(pendingLocalWrite.current)return;
-        const version=await fetchSharedDatabaseVersion();
-        if(!isActive()||pendingLocalWrite.current)return;
-        if(version&&version===lastSharedUpdatedAt.current){setSyncStatus('shared');setSyncRetry(value=>value+1);return;}
-        let row=await fetchSharedDatabase();
-        if(!row){await initializeSharedDatabase(dbRef.current);row=await fetchSharedDatabase();}
-        if(!row?.data||!Array.isArray(row.data.products))throw new Error('Shared inventory is unavailable.');
-        if(!isActive()||pendingLocalWrite.current)return;
-        lastSharedUpdatedAt.current=row.updated_at||version;
-        const payload=JSON.stringify(row.data);
-        if(payload!==lastSyncedJson.current){lastSyncedJson.current=payload;const normalized=normalizeDatabase(row.data);setDb(current=>JSON.stringify(current)===JSON.stringify(normalized)?current:mergeDatabases(current,normalized))}
-        setSyncStatus('shared');
-        setSyncRetry(value=>value+1);
-    },()=>setSyncStatus('error'));
-  },[syncReady]);
+  useEffect(()=>{void syncRef.current?.localChanged()},[db]);
   const products=db.products;
   const enriched=useMemo(()=>products.map(p=>({...p,sortedLots:[...(p.lots||[])].sort((a,b)=>a.expiry.localeCompare(b.expiry)),nextLot:[...(p.lots||[])].filter(x=>x.expiry).sort((a,b)=>a.expiry.localeCompare(b.expiry)).find(x=>x.expiry>=today())||[...(p.lots||[])].filter(x=>x.expiry).sort((a,b)=>a.expiry.localeCompare(b.expiry))[0]})),[products]);
   const filtered=enriched.filter(p=>{
@@ -296,7 +236,7 @@ function App(){
   const soonCount=enriched.filter(p=>p.nextLot&&statusFor(p.nextLot.expiry)==='soon').length;
   const expiredCount=enriched.filter(p=>p.nextLot&&statusFor(p.nextLot.expiry)==='expired').length;
   const selectMetricFilter=value=>{setFilter(value);setView('inventory');setMobileMenu(false)};
-  const activityEntry=(type,product,detail='')=>({id:uid(),type,product:product?.name||'',barcode:product?.barcode||'',detail,at:new Date().toISOString()});
+  const activityEntry=(type,product,detail='')=>({id:uid(),type,product:product?.name||'',barcode:product?.barcode||'',productId:product?.id||'',detail,at:nextChangeStamp(dbRef.current)});
   const log=(type,product,detail='')=>setDb(prev=>({...prev,activity:[activityEntry(type,product,detail),...(prev.activity||[])].slice(0,100)}));
   const notify=s=>{setToast(s);setToastUndo(false);setDeletedProduct(null)};
   function stopCamera(){
@@ -355,39 +295,30 @@ function App(){
     setModal('form');setForm(newProductForm(barcode));
   }
   function newProductForm(barcode=''){return {id:null,barcode,name:'',size:'',photo:'',expiry:''};}
-  function openNew(){setPhotoProcessing(false);setForm(newProductForm(''));setModal('form');}
-  function openEdit(p){setPhotoProcessing(false);const dates=(p.lots||[]).map(lot=>lot.expiry).filter(Boolean).sort();const expiry=p.nextLot?.expiry||dates.find(date=>date>=today())||dates[dates.length-1]||'';setForm({id:p.id,barcode:p.barcode||'',name:p.name||'',size:p.size||'',photo:p.photo||'',expiry});setModal('form');}
+  function openNew(){photoRequestRef.current++;setPhotoProcessing(false);setForm(newProductForm(''));setModal('form');}
+  function openEdit(p){photoRequestRef.current++;setPhotoProcessing(false);const dates=(p.lots||[]).map(lot=>lot.expiry).filter(Boolean).sort();const expiry=p.nextLot?.expiry||dates.find(date=>date>=today())||dates[dates.length-1]||'';setForm({id:p.id,barcode:p.barcode||'',name:p.name||'',size:p.size||'',photo:p.photo||'',expiry});setModal('form');}
   async function saveProduct(e){
     e?.preventDefault();if(photoProcessing||savingProduct)return;if(!form?.barcode?.trim()){notify(t.barcodeRequired);return;}if(!form?.name?.trim()){notify(t.required);return;}if(!form?.size){notify(t.sizeRequired);return;}if(!form?.expiry){notify(t.dateRequired);return;}if(!form?.photo){notify(t.photoRequired);return;}if(!isDisplayableProductPhoto(form.photo)){notify(t.photoTooLarge);return;}
     try{
       setSavingProduct(true);
       let remoteSaveFailed=false;
-      let waitingForConnection=sharedStorageEnabled&&!lastSyncedJson.current;
+      let waitingForConnection=sharedStorageEnabled&&!syncRef.current;
       let localSaveFailed=false;
       let updated, nextProducts, action;
       if(form?.id){
         const old=products.find(p=>p.id===form.id);if(!old)throw new Error(t.required);
-        updated=updateProduct(old,form,{now:()=>new Date().toISOString(),lotId:uid});
+        updated=updateProduct(old,form,{now:()=>nextChangeStamp(dbRef.current),lotId:uid});
         nextProducts=products.map(p=>p.id===form.id?updated:p);action='updated';
       }else{
-        updated=createProduct(form,{id:uid,lotId:uid,now:()=>new Date().toISOString()});
+        updated=createProduct(form,{id:uid,lotId:uid,now:()=>nextChangeStamp(dbRef.current)});
         nextProducts=[updated,...products];action='created';
       }
       const nextDb={...db,products:nextProducts,activity:[activityEntry(action,updated),...(db.activity||[])].slice(0,100)};
       setDb(nextDb);
       try{localStorage.setItem(STORAGE_KEY,JSON.stringify(nextDb));setStorageError(false)}catch(error){console.error('Could not save local inventory:',error);setStorageError(true);localSaveFailed=true}
       setSelected(updated.id);setView('detail');setModal(null);
-      if(sharedStorageEnabled&&lastSyncedJson.current){
-        pendingLocalWrite.current=true;
-        try{
-          const saved=await persistSharedDatabase(nextDb);
-          lastSharedUpdatedAt.current=saved.updatedAt;
-          lastSyncedJson.current=JSON.stringify(saved.data);
-          setDb(current=>JSON.stringify(current)===JSON.stringify(nextDb)?saved.data:mergeDatabases(current,saved.data));
-          setSyncStatus('shared');
-        }
-        catch(error){console.error('Could not confirm shared product save:',error);setSyncStatus('error');remoteSaveFailed=true}
-        finally{pendingLocalWrite.current=false}
+      if(sharedStorageEnabled&&syncRef.current){
+        remoteSaveFailed=!(await syncRef.current.localChanged());
       }
       notify(localSaveFailed?t.storageError:remoteSaveFailed||waitingForConnection?t.syncError:t.productSaved);
     }catch(error){console.error('Could not save product:',error);notify(t.saveError);return;}
@@ -402,12 +333,12 @@ function App(){
     setLotForm({expiry:''});setModal(null);notify(t.productSaved);
   }
   function deleteProduct(p){if(!p)return;setProductToDelete(p);setModal('delete-product');}
-  function confirmProductDelete(){const p=productToDelete;if(!p)return;setDb(prev=>({...prev,products:prev.products.filter(x=>x.id!==p.id)}));log('deleted',p);setDeletedProduct(p);setToastUndo(true);setToast(t.productDeleted);setView('inventory');setSelected(null);setProductToDelete(null);setModal(null);}
-  function undoDelete(){if(!deletedProduct)return;setDb(prev=>prev.products.some(p=>p.id===deletedProduct.id)?prev:{...prev,products:[deletedProduct,...prev.products]});setDeletedProduct(null);setToastUndo(false);setToast(t.productRestored);}
-  function deleteLot(lot){if(!confirm(t.sureDateEntry))return;const p=products.find(x=>x.id===selected);if(!p)return;setDb(prev=>({...prev,products:prev.products.map(x=>x.id===p.id?{...x,lots:x.lots.filter(l=>l.id!==lot.id)}:x)}));}
+  function confirmProductDelete(){const p=productToDelete;if(!p)return;setDb(prev=>removeProduct(prev,p.id));log('deleted',p);setDeletedProduct(p);setToastUndo(true);setToast(t.productDeleted);setView('inventory');setSelected(null);setProductToDelete(null);setModal(null);}
+  function undoDelete(){if(!deletedProduct)return;setDb(prev=>restoreProduct(prev,deletedProduct));setDeletedProduct(null);setToastUndo(false);setToast(t.productRestored);}
+  function deleteLot(lot){if(!confirm(t.sureDateEntry))return;const p=products.find(x=>x.id===selected);if(!p)return;setDb(prev=>removeExpiry(prev,p.id,lot));}
   function exportJSON(){const blob=new Blob([JSON.stringify({...db,exportedAt:new Date().toISOString(),schemaVersion:1},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`bottletrack-backup-${today()}.json`;a.click();URL.revokeObjectURL(url);}
-  function importJSON(e){const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const value=JSON.parse(reader.result);if(!Array.isArray(value.products)||!Array.isArray(value.activity||[]))throw Error();if(confirm(t.overwriteTitle+'\n'+t.overwriteBody)){setDb(normalizeDatabase(value));setView('inventory');setSelected(null);notify(t.imported);}}catch{notify(t.invalidFile);}e.target.value='';};reader.readAsText(file);}
-  async function photoChange(e){const input=e.target;const f=input.files?.[0];if(!f)return;if(photoProcessing){input.value='';return;}setPhotoProcessing(true);try{const photo=await compressProductPhoto(f);setForm(v=>({...v,photo}));}catch(error){console.error('Could not process product photo:',error);notify(error?.code==='PHOTO_TOO_LARGE'?t.photoTooLarge:t.photoError);}finally{input.value='';setPhotoProcessing(false);}}
+  function importJSON(e){const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const value=JSON.parse(reader.result);if(!Array.isArray(value.products)||!Array.isArray(value.activity||[]))throw Error();if(confirm(t.overwriteTitle+'\n'+t.overwriteBody)){setDb(prev=>replaceInventory(prev,value));setView('inventory');setSelected(null);notify(t.imported);}}catch{notify(t.invalidFile);}e.target.value='';};reader.readAsText(file);}
+  async function photoChange(e){const input=e.target;const f=input.files?.[0];if(!f)return;const request=++photoRequestRef.current;if(photoProcessing){input.value='';return;}setPhotoProcessing(true);try{const photo=await compressProductPhoto(f);if(request===photoRequestRef.current)setForm(v=>v?{...v,photo}:v);}catch(error){console.error('Could not process product photo:',error);notify(error?.code==='PHOTO_TOO_LARGE'?t.photoTooLarge:t.photoError);}finally{input.value='';if(request===photoRequestRef.current)setPhotoProcessing(false);}}
   const selectedProduct=enriched.find(p=>p.id===selected);
   const statusLabel=s=>s==='expired'?t.overdue:s==='soon'?t.soon:s==='ok'?t.ok:t.unknown;
   const StatusPill=({status})=><span className={`status status-${status}`}>{status==='expired'?<AlertTriangle size={13}/>:status==='soon'?<Clock3 size={13}/>:status==='ok'?<CheckCircle2 size={13}/>:<CalendarClock size={13}/>} {statusLabel(status)}</span>;
