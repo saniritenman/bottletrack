@@ -20,7 +20,7 @@ const messages = {
   en: {
     app:'BottleTrack', branchLabel:'Bana Mashkaot · Sderot Branch', photoProcessing:'Preparing photo…', tagline:'Your stock. In date. Under control.', overview:'Overview', inventory:'Inventory',
     expiring:'Expiring soon', expired:'Expired', products:'Products', tracked:'Tracked products',
-    search:'Search name or barcode…', scan:'Scan barcode', add:'Add product', addLot:'Add expiry date',
+    search:'Search name or barcode…', sortBy:'Sort by', sortName:'Name (A–Z)', sortDate:'Expiration date', scan:'Scan barcode', add:'Add product', addLot:'Add expiry date',
     all:'All products', ok:'In date', soon:'Expiring soon', overdue:'Expired', noProducts:'No products yet',
     noProductsHint:'Scan a bottle or add your first product to track expiration dates.',
     barcode:'Barcode', name:'Product name', size:'Bottle size', size330:'330 ml', size500:'500 ml', size750:'750 ml', size1500:'1.5 L', sizeCan:'Can', size500Can:'500 ml Can', barcodeRequired:'Enter a barcode.', sizeRequired:'Choose a bottle size.', photoRequired:'Add a product photo.',
@@ -58,7 +58,7 @@ const messages = {
   he: {
     app:'BottleTrack', branchLabel:'בנה משקאות · סניף שדרות', photoProcessing:'מכינים את התמונה…', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
     expiring:'עומדים לפוג', expired:'פגי תוקף', products:'מוצרים', tracked:'מוצרים במעקב',
-    search:'חיפוש לפי שם או ברקוד…', scan:'סריקת ברקוד', add:'הוספת מוצר', addLot:'הוספת תאריך תפוגה',
+    search:'חיפוש לפי שם או ברקוד…', sortBy:'מיון לפי', sortName:'שם (א׳–ת׳)', sortDate:'תאריך תפוגה', scan:'סריקת ברקוד', add:'הוספת מוצר', addLot:'הוספת תאריך תפוגה',
     all:'כל המוצרים', ok:'בתוקף', soon:'עומדים לפוג', overdue:'פג תוקף', noProducts:'עדיין אין מוצרים',
     noProductsHint:'סרקו בקבוק או הוסיפו מוצר ראשון כדי לעקוב אחר תאריכי תפוגה.',
     barcode:'ברקוד', name:'שם המוצר', size:'גודל הבקבוק', size330:'330 מ״ל', size500:'500 מ״ל', size750:'750 מ״ל', size1500:'1.5 ליטר', sizeCan:'פחית', size500Can:'פחית 500 מ״ל', barcodeRequired:'יש להזין ברקוד.', sizeRequired:'יש לבחור גודל בקבוק.', photoRequired:'יש להוסיף תמונת מוצר.',
@@ -96,7 +96,7 @@ const messages = {
   ru: {
     app:'BottleTrack', branchLabel:'Bana Mashkaot · филиал Сдерот', photoProcessing:'Подготовка фото…', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
     expiring:'Скоро истекает', expired:'Просрочено', products:'Товары', tracked:'Товаров отслеживается',
-    search:'Поиск по названию или штрихкоду…', scan:'Сканировать штрихкод', add:'Добавить товар', addLot:'Добавить срок годности',
+    search:'Поиск по названию или штрихкоду…', sortBy:'Сортировка', sortName:'Название (А–Я)', sortDate:'Срок годности', scan:'Сканировать штрихкод', add:'Добавить товар', addLot:'Добавить срок годности',
     all:'Все товары', ok:'В сроке', soon:'Скоро истекает', overdue:'Просрочено', noProducts:'Пока нет товаров',
     noProductsHint:'Отсканируйте бутылку или добавьте первый товар, чтобы отслеживать сроки годности.',
     barcode:'Штрихкод', name:'Название товара', size:'Объём бутылки', size330:'330 мл', size500:'500 мл', size750:'750 мл', size1500:'1,5 л', sizeCan:'Банка', size500Can:'Банка 500 мл', barcodeRequired:'Введите штрихкод.', sizeRequired:'Выберите объём.', photoRequired:'Добавьте фото товара.',
@@ -145,6 +145,7 @@ function App(){
   const [theme,setTheme]=useState(()=>localStorage.getItem(THEME_KEY)==='dark'?'dark':'light');
   const [query,setQuery]=useState('');
   const [filter,setFilter]=useState('all');
+  const [sortBy,setSortBy]=useState('name');
   const [view,setView]=useState('inventory');
   const [selected,setSelected]=useState(null);
   const [modal,setModal]=useState(null);
@@ -238,7 +239,9 @@ function App(){
     const match=!q||[p.name,p.barcode].some(x=>(x||'').toLowerCase().includes(q));
     const s=p.nextLot?statusFor(p.nextLot.expiry):'unknown';
     return match&&(filter==='all'||filter===s);
-  }).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  }).sort((a,b)=>sortBy==='date'
+    ?(a.nextLot?.expiry||'9999-12-31').localeCompare(b.nextLot?.expiry||'9999-12-31')||(a.name||'').localeCompare(b.name||'')
+    :(a.name||'').localeCompare(b.name||''));
   const soonCount=enriched.filter(p=>p.nextLot&&statusFor(p.nextLot.expiry)==='soon').length;
   const expiredCount=enriched.filter(p=>p.nextLot&&statusFor(p.nextLot.expiry)==='expired').length;
   const selectMetricFilter=value=>{setFilter(value);setView('inventory');setMobileMenu(false)};
@@ -388,7 +391,7 @@ function App(){
           <button type="button" className={`metric ${filter==='expired'?'metric-active':''}`} onClick={()=>selectMetricFilter('expired')} aria-pressed={filter==='expired'}><div className="metric-top"><span>{t.expired}</span><div className="metric-icon red"><AlertTriangle size={18}/></div></div><strong>{expiredCount}</strong><small>{t.overdue}</small></button>
         </div>
         <section className="inventory-panel">
-          <div className="inventory-toolbar"><div><h2>{t.productCatalog}</h2><p>{filtered.length} {t.productsCount}</p></div><div className="toolbar-controls"><label className="searchbox"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t.search}/>{query&&<button onClick={()=>setQuery('')} aria-label={t.clearSearch}><X size={15}/></button>}</label><label className="filterbox"><Filter size={16}/><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">{t.all}</option><option value="ok">{t.ok}</option><option value="soon">{t.soon}</option><option value="expired">{t.overdue}</option><option value="unknown">{t.unknown}</option></select></label></div></div>
+          <div className="inventory-toolbar"><div><h2>{t.productCatalog}</h2><p>{filtered.length} {t.productsCount}</p></div><div className="toolbar-controls"><label className="searchbox"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t.search}/>{query&&<button onClick={()=>setQuery('')} aria-label={t.clearSearch}><X size={15}/></button>}</label><label className="filterbox sortbox"><select aria-label={t.sortBy} value={sortBy} onChange={e=>setSortBy(e.target.value)}><option value="name">{t.sortName}</option><option value="date">{t.sortDate}</option></select></label><label className="filterbox"><Filter size={16}/><select aria-label={t.filter} value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">{t.all}</option><option value="ok">{t.ok}</option><option value="soon">{t.soon}</option><option value="expired">{t.overdue}</option><option value="unknown">{t.unknown}</option></select></label></div></div>
           {filtered.length? <div className="product-list">{filtered.map(p=>{const s=p.nextLot?statusFor(p.nextLot.expiry):'unknown';return <button className="product-row" key={p.id} onClick={()=>{setSelected(p.id);setView('detail');setMobileMenu(false)}}><div className="product-thumb">{isDisplayableProductPhoto(p.photo)?<img src={p.photo} alt=""/>:<Wine size={22}/>}</div><div className="product-main"><strong>{p.name}</strong>{p.size&&<span className="product-size-label">{sizeLabel(p.size,t)}</span>}<span className="product-barcode">{p.barcode||t.noBarcode}</span></div><div className="product-expiry"><span>{t.latestExpiry}</span><strong>{p.nextLot?fmtDate(p.nextLot.expiry,lang):t.unknown}</strong></div><div className="product-status"><StatusPill status={s}/>{p.nextLot&&<small>{daysUntil(p.nextLot.expiry)===0?t.today:daysUntil(p.nextLot.expiry)<0?`${Math.abs(daysUntil(p.nextLot.expiry))} ${t.expiredBy}`:`${daysUntil(p.nextLot.expiry)} ${t.expiresIn}`}</small>}</div><ArrowUpRight className="row-arrow" size={17}/></button>})}</div>:<div className="empty-state"><div className="empty-illustration"><ScanLine size={34}/></div><h3>{query||filter!=='all'?t.noMatches:t.noProducts}</h3><p>{t.noProductsHint}</p><div className="empty-actions"><button className="button primary" onClick={openScanner}><ScanLine size={17}/>{t.scan}</button><button className="button secondary" onClick={openNew}><Plus size={17}/>{t.add}</button></div></div>}
         </section>
         <div className="bottom-tip"><div className="tip-icon"><CircleHelp size={17}/></div><p><strong>{syncStatus==='shared'?t.sharedInventory:t.localOnly}</strong> — {storageError?t.storageError:syncStatus==='error'?t.syncError:syncStatus==='shared'?t.sharedNotice:t.localNotice}</p><button onClick={exportJSON}>{t.export}<Download size={15}/></button></div>
