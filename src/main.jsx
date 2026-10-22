@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import './styles.css';
 import { createProduct, mergeDatabases, normalizeDatabase, updateProduct } from './product-model.js';
-import { fetchSharedDatabase, initializeSharedDatabase, saveSharedDatabase, sharedStorageEnabled } from './shared-storage.js';
+import { fetchSharedDatabase, fetchSharedDatabaseVersion, initializeSharedDatabase, saveSharedDatabase, sharedStorageEnabled } from './shared-storage.js';
 import { compressProductPhoto, isDisplayableProductPhoto } from './photo-utils.js';
 
 const STORAGE_KEY = 'bottletrack.data.v1';
@@ -168,7 +168,7 @@ function App(){
   const [cameraOn,setCameraOn]=useState(false);
   const [form,setForm]=useState(null);
   const [lotForm,setLotForm]=useState({expiry:''});
-  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), lastSyncedJson=useRef(null), pendingLocalWrite=useRef(false), localChangesDuringSync=useRef(false), dbRef=useRef(db);
+  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), lastSyncedJson=useRef(null), lastSharedUpdatedAt=useRef(null), pendingLocalWrite=useRef(false), localChangesDuringSync=useRef(false), pollInFlight=useRef(false), dbRef=useRef(db);
   dbRef.current=db;
   const t=messages[lang]||messages.en, rtl=lang==='he';
   const SyncIndicator=({className=''})=>{
@@ -199,6 +199,7 @@ function App(){
         if(!row){await initializeSharedDatabase(readDB());row=await fetchSharedDatabase();}
         if(row?.data&&Array.isArray(row.data.products)){
           lastSyncedJson.current=JSON.stringify(row.data);
+          lastSharedUpdatedAt.current=row.updated_at||null;
           const localDb=localChangesDuringSync.current?dbRef.current:readDB();
           const mergedData=mergeDatabases(localDb,row.data);
           if(active){setDb(normalizeDatabase(mergedData));setSyncStatus('shared')}
@@ -209,12 +210,12 @@ function App(){
     return()=>{active=false};
   },[]);
   useEffect(()=>{
-    if(!sharedStorageEnabled||!syncReady||!lastSyncedJson.current||!['shared','error'].includes(syncStatus))return;
+    if(!sharedStorageEnabled||!syncReady||!lastSyncedJson.current||pendingLocalWrite.current||!['shared','error'].includes(syncStatus))return;
     const payload=JSON.stringify(db);
     if(payload===lastSyncedJson.current)return;
     pendingLocalWrite.current=true;
     const timer=setTimeout(async()=>{
-      try{await saveSharedDatabase(db);lastSyncedJson.current=payload;pendingLocalWrite.current=false;setSyncStatus('shared')}
+      try{lastSharedUpdatedAt.current=await saveSharedDatabase(db);lastSyncedJson.current=payload;pendingLocalWrite.current=false;setSyncStatus('shared')}
       catch{pendingLocalWrite.current=false;setSyncStatus('error');window.setTimeout(()=>setSyncRetry(value=>value+1),3000)}
     },syncStatus==='error'?3000:250);
     return()=>{clearTimeout(timer);pendingLocalWrite.current=false};
@@ -222,14 +223,19 @@ function App(){
   useEffect(()=>{
     if(!sharedStorageEnabled||!syncReady||syncStatus!=='shared')return;
     const timer=setInterval(async()=>{
-      if(pendingLocalWrite.current)return;
+      if(pendingLocalWrite.current||pollInFlight.current||document.hidden)return;
+      pollInFlight.current=true;
       try{
+        const version=await fetchSharedDatabaseVersion();
+        if(!version||version===lastSharedUpdatedAt.current)return;
         const row=await fetchSharedDatabase();
         if(!row?.data)return;
+        lastSharedUpdatedAt.current=row.updated_at||version;
         const payload=JSON.stringify(row.data);
         if(payload!==lastSyncedJson.current){lastSyncedJson.current=payload;const normalized=normalizeDatabase(row.data);setDb(current=>JSON.stringify(current)===JSON.stringify(normalized)?current:normalized)}
       }catch{setSyncStatus('error')}
-    },4000);
+      finally{pollInFlight.current=false}
+    },2000);
     return()=>clearInterval(timer);
   },[syncReady,syncStatus]);
   const products=db.products;
@@ -329,7 +335,7 @@ function App(){
       setSelected(updated.id);setView('detail');setModal(null);
       if(sharedStorageEnabled&&lastSyncedJson.current){
         pendingLocalWrite.current=true;
-        try{await saveSharedDatabase(nextDb);lastSyncedJson.current=JSON.stringify(nextDb);setSyncStatus('shared')}
+        try{lastSharedUpdatedAt.current=await saveSharedDatabase(nextDb);lastSyncedJson.current=JSON.stringify(nextDb);setSyncStatus('shared')}
         catch(error){console.error('Could not confirm shared product save:',error);setSyncStatus('error');remoteSaveFailed=true}
         finally{pendingLocalWrite.current=false}
       }

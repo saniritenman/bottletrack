@@ -1,5 +1,6 @@
-export const MAX_PRODUCT_PHOTO_EDGE = 1280;
+export const MAX_PRODUCT_PHOTO_EDGE = 960;
 export const MAX_PRODUCT_PHOTO_DISPLAY_LENGTH = 500_000;
+export const MAX_PRODUCT_PHOTO_UPLOAD_LENGTH = 220_000;
 
 export function isDisplayableProductPhoto(photo) {
   return typeof photo === 'string' && photo.length > 0 && photo.length <= MAX_PRODUCT_PHOTO_DISPLAY_LENGTH;
@@ -23,7 +24,7 @@ export async function compressProductPhoto(file) {
         canvas.toBlob(result => result ? resolve(result) : reject(new Error('Could not resize this image.')), 'image/jpeg', quality);
       });
       const dataUrl = await readAsDataURL(blob);
-      if (dataUrl.length <= MAX_PRODUCT_PHOTO_DISPLAY_LENGTH) return dataUrl;
+      if (dataUrl.length <= MAX_PRODUCT_PHOTO_UPLOAD_LENGTH) return dataUrl;
       canvas.width = Math.max(1, Math.round(canvas.width * 0.82));
       canvas.height = Math.max(1, Math.round(canvas.height * 0.82));
       context.drawImage(image, 0, 0, canvas.width, canvas.height);

@@ -14,6 +14,13 @@ export async function fetchSharedDatabase() {
   return rows[0] || null;
 }
 
+export async function fetchSharedDatabaseVersion() {
+  const response = await fetch(`${endpoint}/rest/v1/bottletrack_state?id=eq.1&select=updated_at`, { headers: requestHeaders() });
+  if (!response.ok) throw new Error(`Shared inventory version could not be checked (${response.status}).`);
+  const rows = await response.json();
+  return rows[0]?.updated_at || null;
+}
+
 export async function initializeSharedDatabase(data) {
   const response = await fetch(`${endpoint}/rest/v1/bottletrack_state?on_conflict=id`, {
     method: 'POST',
@@ -24,10 +31,12 @@ export async function initializeSharedDatabase(data) {
 }
 
 export async function saveSharedDatabase(data) {
-  const response = await fetch(`${endpoint}/rest/v1/bottletrack_state?on_conflict=id`, {
+  const response = await fetch(`${endpoint}/rest/v1/bottletrack_state?on_conflict=id&select=updated_at`, {
     method: 'POST',
-    headers: requestHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+    headers: requestHeaders({ Prefer: 'resolution=merge-duplicates,return=representation' }),
     body: JSON.stringify({ id: 1, data }),
   });
   if (!response.ok) throw new Error(`Shared inventory could not be saved (${response.status}).`);
+  const rows = await response.json();
+  return rows[0]?.updated_at || null;
 }

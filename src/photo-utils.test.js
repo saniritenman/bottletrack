@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compressProductPhoto, isDisplayableProductPhoto, MAX_PRODUCT_PHOTO_EDGE, MAX_PRODUCT_PHOTO_DISPLAY_LENGTH } from './photo-utils.js';
+import { compressProductPhoto, isDisplayableProductPhoto, MAX_PRODUCT_PHOTO_EDGE, MAX_PRODUCT_PHOTO_DISPLAY_LENGTH, MAX_PRODUCT_PHOTO_UPLOAD_LENGTH } from './photo-utils.js';
 
 test('keeps oversized legacy photos out of the mobile render tree', () => {
   assert.equal(isDisplayableProductPhoto('data:image/jpeg;base64,small'), true);
@@ -37,7 +37,7 @@ test('compresses large photos to a mobile-friendly maximum edge', async () => {
     const photo = await compressProductPhoto({ type: 'image/jpeg' });
     assert.equal(photo, 'data:image/jpeg;base64,compressed');
     assert.equal(canvasSize.width, MAX_PRODUCT_PHOTO_EDGE);
-    assert.equal(canvasSize.height, 960);
+    assert.equal(canvasSize.height, Math.round(3024 * MAX_PRODUCT_PHOTO_EDGE / 4032));
     assert.equal(imageClosed, true);
   } finally {
     for (const [key, value] of Object.entries(previous)) {
@@ -91,7 +91,7 @@ test('recompresses photos until their stored data fits the display limit', async
 
   try {
     const photo = await compressProductPhoto({ type: 'image/jpeg' });
-    assert.ok(photo.length <= MAX_PRODUCT_PHOTO_DISPLAY_LENGTH);
+    assert.ok(photo.length <= MAX_PRODUCT_PHOTO_UPLOAD_LENGTH);
     assert.equal(encodes, 2);
   } finally {
     for (const [key, value] of Object.entries(previous)) {
