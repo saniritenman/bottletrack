@@ -361,3 +361,17 @@ button.sync-indicator .sync-pending-count{position:absolute;top:-6px;inset-inlin
 :root[data-theme="dark"] button.sync-indicator{background:#17263d}
 :root[data-theme="dark"] button.sync-indicator .sync-pending-count{border-color:#17263d}
 @media(max-width:850px){button.sync-indicator{width:40px;height:40px;padding:0}}
+
+/* The native select fills the whole control, including the area beneath its icons. */
+.toolbar-controls{flex-wrap:wrap}
+.toolbar-controls .filterbox{position:relative;display:block;flex:0 1 auto;width:174px;min-width:150px;height:44px;padding:0;cursor:pointer;border-color:#cdd9e5;transition:border-color .15s,box-shadow .15s}
+.toolbar-controls .filterbox.sortbox{width:192px;min-width:165px}
+.toolbar-controls .filterbox select{display:block;width:100%;height:100%;min-height:0;max-width:none!important;margin:0;padding:0 36px;border:0;border-radius:inherit;background:transparent;appearance:none;cursor:pointer;font-size:12px;text-align:start;color:inherit;outline:none}
+.toolbar-controls .sortbox select{padding-inline-start:12px}
+.toolbar-select-icon,.toolbar-select-chevron{position:absolute;top:50%;transform:translateY(-50%);pointer-events:none;z-index:1;color:#617e9b}
+.toolbar-select-icon{inset-inline-start:12px}
+.toolbar-select-chevron{inset-inline-end:12px}
+.toolbar-controls .filterbox:hover{border-color:#6c9ed5}
+.toolbar-controls .filterbox:focus-within{border-color:#3979be;box-shadow:0 0 0 3px #3979be24}
+:root[data-theme="dark"] .toolbar-select-icon,:root[data-theme="dark"] .toolbar-select-chevron{color:#a9c8e9}
+@media(max-width:600px){.toolbar-controls .filterbox,.toolbar-controls .filterbox.sortbox{flex:1 1 0;width:auto;min-width:0;height:46px}.toolbar-controls .filterbox select{font-size:16px;padding-inline:32px}.toolbar-controls .sortbox select{padding-inline-start:10px}.toolbar-select-icon{inset-inline-start:10px}.toolbar-select-chevron{inset-inline-end:10px}}
