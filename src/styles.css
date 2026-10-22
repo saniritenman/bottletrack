@@ -119,6 +119,18 @@ button.metric:focus-visible{outline:3px solid #85bca2;outline-offset:3px}
 :root[data-theme="dark"] .timeline-dot.ok{background:#58bd78;box-shadow:0 0 0 4px #203b2c}
 .lang-picker .lang-select-wrap select{background:#1b3b61!important;border:1px solid #3a5c80!important;border-radius:11px;padding-block:10px;color:#e7f2ff!important}
 :root[data-theme="dark"] .lang-picker .lang-select-wrap select{background:#203a56!important;border-color:#426184!important;color:#edf5ff!important}
+.button.danger{background:#b83b37;color:#fff;box-shadow:0 2px 5px #7e272526}
+.button.danger:hover{background:#982d2a}
+.confirm-delete-modal{width:min(100%,460px)}
+.delete-confirm-product{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid #f1d6d3;border-radius:11px;background:#fff7f6;color:#3d3534}
+.delete-confirm-product strong{min-width:0;overflow-wrap:anywhere;font-size:14px}
+.delete-confirm-icon{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:#fde7e5;color:#b83b37}
+.confirm-delete-modal .modal-description{margin:14px 0 0}
+.confirm-delete-modal .modal-footer{margin-top:18px}
+:root[data-theme="dark"] .button.danger{background:#c64a45;color:#fff}
+:root[data-theme="dark"] .button.danger:hover{background:#db5a55}
+:root[data-theme="dark"] .delete-confirm-product{border-color:#563a3a;background:#302528;color:#f0e6e6}
+:root[data-theme="dark"] .delete-confirm-icon{background:#4c2e30;color:#ffaaa3}
 .status.status-ok{background:#e4f4e8!important;color:#267543!important;border:1px solid #cce8d4}
 :root[data-theme="dark"] .status.status-ok{background:#1e4933!important;color:#9be2b0!important;border-color:#2f6847}
 :root[data-theme="dark"] .metric-icon-window span{border-color:#19241e;background:#a66b0f;color:#fff}
