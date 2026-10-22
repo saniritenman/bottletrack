@@ -1,31 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <title>BottleTrack — bottle, barcode and calendar</title>
   <defs>
-    <linearGradient id="night" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#193c68"/>
-      <stop offset="1" stop-color="#101f3b"/>
-    </linearGradient>
-    <linearGradient id="spirit" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#f5c56c"/>
-      <stop offset=".48" stop-color="#c98137"/>
-      <stop offset="1" stop-color="#9a5527"/>
-    </linearGradient>
-    <linearGradient id="foil" x1="0" y1="0" x2="0" y2="1">
-      <stop stop-color="#ffe6a0"/>
-      <stop offset="1" stop-color="#c78735"/>
-    </linearGradient>
+    <linearGradient id="blue" x1="60" y1="50" x2="460" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#245ba9"/><stop offset=".6" stop-color="#153766"/><stop offset="1" stop-color="#0b1c38"/></linearGradient>
+    <linearGradient id="glass" x1="142" y1="152" x2="293" y2="399" gradientUnits="userSpaceOnUse"><stop stop-color="#f4fcff"/><stop offset="1" stop-color="#b3d9f0"/></linearGradient>
+    <linearGradient id="amber" x1="176" y1="321" x2="278" y2="419" gradientUnits="userSpaceOnUse"><stop stop-color="#f2c56d"/><stop offset="1" stop-color="#c87e36"/></linearGradient>
   </defs>
-  <rect width="512" height="512" rx="118" fill="url(#night)"/>
-  <circle cx="256" cy="256" r="204" fill="#fff" opacity=".035"/>
-  <path d="M206 82h100v38h-12v71l34 38c17 19 27 44 27 69v114c0 34-27 61-61 61h-76c-34 0-61-27-61-61V298c0-25 10-50 27-69l34-38v-71h-12V82Z" fill="url(#spirit)" stroke="#f6d58e" stroke-width="8" stroke-linejoin="round"/>
-  <path d="M205 82h102v43H205z" fill="url(#foil)"/>
-  <path d="M205 145h102v32l-14 16h-74l-14-16z" fill="#18365d" opacity=".68"/>
-  <path d="M180 286c21-10 42-10 64 0 20 9 42 9 64 0 13-6 25-8 38-6v132c0 34-27 61-61 61h-76c-34 0-61-27-61-61V291c12 1 22-1 32-5Z" fill="#b96f32" opacity=".42"/>
-  <rect x="169" y="251" width="174" height="151" rx="18" fill="#fff8e8" stroke="#d39a53" stroke-width="7"/>
-  <path d="M169 269c0-10 8-18 18-18h138c10 0 18 8 18 18v22H169v-22Z" fill="#d7a24c"/>
-  <text x="256" y="281" text-anchor="middle" fill="#fff8e8" font-family="Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3">BOTTLETRACK</text>
-  <path d="M194 319v48m10-48v48m13-48v48m8-48v48m14-48v48m11-48v48m17-48v48m11-48v48m9-48v48" stroke="#18365d" stroke-width="6" stroke-linecap="round"/>
-  <rect x="302" y="315" width="25" height="31" rx="5" fill="#dff0e3" stroke="#3f875b" stroke-width="3"/>
-  <path d="M302 324h25m-18-13v9m11-9v9" stroke="#3f875b" stroke-width="3" stroke-linecap="round"/>
-  <path d="m371 134 9 23 23 9-23 9-9 23-9-23-23-9 23-9 9-23Z" fill="#f5cf7d"/>
-  <path d="M118 372h29m-15-15 15 15-15 15" fill="none" stroke="#9edcf3" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+  <rect width="512" height="512" rx="116" fill="url(#blue)"/>
+  <circle cx="256" cy="256" r="191" stroke="#92c9ff" stroke-opacity=".15" stroke-width="2"/>
+  <path d="M101 182v-37c0-24 19-43 43-43h29m166 0h29c24 0 43 19 43 43v37M101 339v29c0 24 19 43 43 43h29" stroke="#8dc9fa" stroke-width="8" stroke-linecap="round" opacity=".55"/>
+  <rect x="179" y="93" width="68" height="35" rx="9" fill="#f0c47b"/>
+  <path d="M188 128h50v64c0 9 5 19 13 26l20 17c14 13 22 30 22 49v105c0 21-17 38-38 38h-85c-21 0-38-17-38-38V284c0-19 8-36 22-49l21-17c8-7 13-17 13-26v-64Z" fill="url(#glass)"/>
+  <path d="M147 328c21-9 43-9 65 0s44 9 66 0v61c0 13-10 23-23 23h-85c-13 0-23-10-23-23v-61Z" fill="url(#amber)"/>
+  <path d="M164 263c0-13 6-25 16-33l14-13" stroke="#fff" stroke-opacity=".8" stroke-width="9" stroke-linecap="round"/>
+  <rect x="151" y="268" width="124" height="73" rx="13" fill="#fff"/>
+  <path d="M169 285v39m10-39v39m15-39v39m8-39v39m12-39v39m15-39v39m9-39v39m17-39v39" stroke="#143866" stroke-width="5"/>
+  <rect x="269" y="264" width="151" height="146" rx="27" fill="#0c2446" stroke="#91c6fa" stroke-width="7"/>
+  <path d="M273 293c0-14 10-25 24-25h96c13 0 23 11 23 25v19H273v-19Z" fill="#3c79c6"/>
+  <path d="M308 253v29m72-29v29" stroke="#d4edff" stroke-width="10" stroke-linecap="round"/>
+  <path d="M300 334h10m17 0h10m-37 23h10" stroke="#8fbbe9" stroke-width="7" stroke-linecap="round"/>
+  <path d="m335 369 17 16 31-38" stroke="#f4ca7c" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m345 154 9 20 22 5-17 15 2 22-19-12-20 9 5-21-14-18 22-1 10-19Z" fill="#f1c985"/>
 </svg>
