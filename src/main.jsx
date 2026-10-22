@@ -9,7 +9,7 @@ import {
 import './styles.css';
 import { createProduct, mergeDatabases, normalizeDatabase, updateProduct } from './product-model.js';
 import { fetchSharedDatabase, fetchSharedDatabaseVersion, initializeSharedDatabase, saveSharedDatabase, sharedStorageEnabled } from './shared-storage.js';
-import { compressProductPhoto, isDisplayableProductPhoto } from './photo-utils.js';
+import { compressProductPhoto, compressStoredProductPhotos, isDisplayableProductPhoto } from './photo-utils.js';
 
 const STORAGE_KEY = 'bottletrack.data.v1';
 const LANG_KEY = 'bottletrack.lang';
@@ -156,6 +156,7 @@ function App(){
   const [duplicateProduct,setDuplicateProduct]=useState(null);
   const [syncStatus,setSyncStatus]=useState(sharedStorageEnabled?'loading':'local');
   const [syncReady,setSyncReady]=useState(false);
+  const [photoMigrationReady,setPhotoMigrationReady]=useState(false);
   const [syncRetry,setSyncRetry]=useState(0);
   const [storageError,setStorageError]=useState(false);
   const [mobileMenu,setMobileMenu]=useState(false);
@@ -168,9 +169,28 @@ function App(){
   const [cameraOn,setCameraOn]=useState(false);
   const [form,setForm]=useState(null);
   const [lotForm,setLotForm]=useState({expiry:''});
-  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), lastSyncedJson=useRef(null), lastSharedUpdatedAt=useRef(null), pendingLocalWrite=useRef(false), localChangesDuringSync=useRef(false), pollInFlight=useRef(false), dbRef=useRef(db);
+  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), lastSyncedJson=useRef(null), lastSharedUpdatedAt=useRef(null), pendingLocalWrite=useRef(false), pollInFlight=useRef(false), dbRef=useRef(db);
   dbRef.current=db;
   const t=messages[lang]||messages.en, rtl=lang==='he';
+  async function persistSharedDatabase(initialData){
+    let data=normalizeDatabase(initialData);
+    let expectedUpdatedAt=lastSharedUpdatedAt.current;
+    for(let attempt=0;attempt<5;attempt++){
+      if(!expectedUpdatedAt){
+        const latest=await fetchSharedDatabase();
+        if(!latest?.data){await initializeSharedDatabase(data);continue;}
+        data=mergeDatabases(data,latest.data);
+        expectedUpdatedAt=latest.updated_at;
+      }
+      const result=await saveSharedDatabase(data,expectedUpdatedAt);
+      if(result.saved)return {data,updatedAt:result.updatedAt};
+      const latest=await fetchSharedDatabase();
+      if(!latest?.data)throw new Error('Shared inventory changed before this save could finish.');
+      data=mergeDatabases(data,latest.data);
+      expectedUpdatedAt=latest.updated_at;
+    }
+    throw new Error('Shared inventory kept changing; retry this save.');
+  }
   const SyncIndicator=({className=''})=>{
     const state=storageError||syncStatus==='error'?'error':syncStatus==='loading'?'loading':syncStatus==='shared'?'shared':'local';
     const label=state==='error'?t.syncFailed:state==='loading'?t.syncSaving:state==='shared'?t.syncSynced:t.syncLocal;
@@ -192,7 +212,7 @@ function App(){
   useEffect(()=>()=>stopCamera(),[]);
   useEffect(()=>{
     let active=true;
-    if(!sharedStorageEnabled){setSyncReady(true);return()=>{active=false}};
+    if(!sharedStorageEnabled){setSyncReady(true);setPhotoMigrationReady(true);return()=>{active=false}};
     (async()=>{
       try{
         let row=await fetchSharedDatabase();
@@ -200,26 +220,48 @@ function App(){
         if(row?.data&&Array.isArray(row.data.products)){
           lastSyncedJson.current=JSON.stringify(row.data);
           lastSharedUpdatedAt.current=row.updated_at||null;
-          const localDb=localChangesDuringSync.current?dbRef.current:readDB();
+          const localDb=dbRef.current;
           const mergedData=mergeDatabases(localDb,row.data);
           if(active){setDb(normalizeDatabase(mergedData));setSyncStatus('shared')}
+          try{
+            const compacted=await compressStoredProductPhotos(mergedData);
+            if(active){
+              const originalPhotos=new Map(mergedData.products.map(product=>[product.id,product.photo]));
+              const compactedPhotos=new Map(compacted.products.map(product=>[product.id,product.photo]));
+              setDb(current=>{
+                let changed=false;
+                const products=current.products.map(product=>{
+                  const smaller=compactedPhotos.get(product.id);
+                  if(product.photo===originalPhotos.get(product.id)&&smaller&&smaller!==product.photo){changed=true;return {...product,photo:smaller}}
+                  return product;
+                });
+                return changed?{...current,products}:current;
+              });
+            }
+          }finally{if(active)setPhotoMigrationReady(true)}
         }else if(active)setSyncStatus('error');
       }catch{if(active)setSyncStatus('error')}
-      finally{if(active)setSyncReady(true)}
+      finally{if(active){setSyncReady(true);setPhotoMigrationReady(true)}}
     })();
     return()=>{active=false};
   },[]);
   useEffect(()=>{
-    if(!sharedStorageEnabled||!syncReady||!lastSyncedJson.current||pendingLocalWrite.current||!['shared','error'].includes(syncStatus))return;
+    if(!sharedStorageEnabled||!syncReady||!photoMigrationReady||!lastSyncedJson.current||pendingLocalWrite.current||!['shared','error'].includes(syncStatus))return;
     const payload=JSON.stringify(db);
     if(payload===lastSyncedJson.current)return;
     pendingLocalWrite.current=true;
     const timer=setTimeout(async()=>{
-      try{lastSharedUpdatedAt.current=await saveSharedDatabase(db);lastSyncedJson.current=payload;pendingLocalWrite.current=false;setSyncStatus('shared')}
+      try{
+        const saved=await persistSharedDatabase(db);
+        lastSharedUpdatedAt.current=saved.updatedAt;
+        lastSyncedJson.current=JSON.stringify(saved.data);
+        setDb(current=>JSON.stringify(current)===payload?saved.data:mergeDatabases(current,saved.data));
+        pendingLocalWrite.current=false;setSyncStatus('shared');
+      }
       catch{pendingLocalWrite.current=false;setSyncStatus('error');window.setTimeout(()=>setSyncRetry(value=>value+1),3000)}
     },syncStatus==='error'?3000:250);
     return()=>{clearTimeout(timer);pendingLocalWrite.current=false};
-  },[db,syncReady,syncStatus,syncRetry]);
+  },[db,syncReady,photoMigrationReady,syncStatus,syncRetry]);
   useEffect(()=>{
     if(!sharedStorageEnabled||!syncReady||syncStatus!=='shared')return;
     const timer=setInterval(async()=>{
@@ -232,7 +274,7 @@ function App(){
         if(!row?.data)return;
         lastSharedUpdatedAt.current=row.updated_at||version;
         const payload=JSON.stringify(row.data);
-        if(payload!==lastSyncedJson.current){lastSyncedJson.current=payload;const normalized=normalizeDatabase(row.data);setDb(current=>JSON.stringify(current)===JSON.stringify(normalized)?current:normalized)}
+        if(payload!==lastSyncedJson.current){lastSyncedJson.current=payload;const normalized=normalizeDatabase(row.data);setDb(current=>JSON.stringify(current)===JSON.stringify(normalized)?current:mergeDatabases(current,normalized))}
       }catch{setSyncStatus('error')}
       finally{pollInFlight.current=false}
     },2000);
@@ -329,13 +371,18 @@ function App(){
         nextProducts=[updated,...products];action='created';
       }
       const nextDb={...db,products:nextProducts,activity:[activityEntry(action,updated),...(db.activity||[])].slice(0,100)};
-      if(sharedStorageEnabled&&!lastSyncedJson.current)localChangesDuringSync.current=true;
       setDb(nextDb);
       try{localStorage.setItem(STORAGE_KEY,JSON.stringify(nextDb));setStorageError(false)}catch(error){console.error('Could not save local inventory:',error);setStorageError(true);localSaveFailed=true}
       setSelected(updated.id);setView('detail');setModal(null);
       if(sharedStorageEnabled&&lastSyncedJson.current){
         pendingLocalWrite.current=true;
-        try{lastSharedUpdatedAt.current=await saveSharedDatabase(nextDb);lastSyncedJson.current=JSON.stringify(nextDb);setSyncStatus('shared')}
+        try{
+          const saved=await persistSharedDatabase(nextDb);
+          lastSharedUpdatedAt.current=saved.updatedAt;
+          lastSyncedJson.current=JSON.stringify(saved.data);
+          setDb(current=>JSON.stringify(current)===JSON.stringify(nextDb)?saved.data:mergeDatabases(current,saved.data));
+          setSyncStatus('shared');
+        }
         catch(error){console.error('Could not confirm shared product save:',error);setSyncStatus('error');remoteSaveFailed=true}
         finally{pendingLocalWrite.current=false}
       }
@@ -346,7 +393,6 @@ function App(){
   function addLot(e){
     e?.preventDefault();if(!lotForm.expiry){notify(t.dateRequired);return;}
     const p=products.find(x=>x.id===selected);if(!p)return;
-    if(sharedStorageEnabled&&!syncReady)localChangesDuringSync.current=true;
     const lot={id:uid(),expiry:lotForm.expiry,createdAt:new Date().toISOString()};
     const updated={...p,lots:[lot,...(p.lots||[])],updatedAt:new Date().toISOString()};
     setDb(prev=>({...prev,products:prev.products.map(x=>x.id===selected?updated:x)}));log('lot-added',updated,fmtDate(lot.expiry,lang));

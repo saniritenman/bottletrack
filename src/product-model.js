@@ -31,24 +31,19 @@ export function mergeDatabases(localValue, sharedValue) {
     item?.id || `${item?.type || ''}|${item?.barcode || ''}|${item?.at || ''}|${item?.detail || ''}`,
     item,
   ])).values()].sort((a, b) => (b?.at || '').localeCompare(a?.at || '')).slice(0, 100);
-  const sharedProducts = new Map(shared.products.map(product => [product.id, product]));
-  const sharedDeletes = new Map();
-  for (const item of shared.activity) {
-    if (item?.type !== 'deleted' || !item.barcode) continue;
-    const previous = sharedDeletes.get(item.barcode) || '';
-    if ((item.at || '') > previous) sharedDeletes.set(item.barcode, item.at || '');
-  }
+  const products = new Map(shared.products.map(product => [product.id, product]));
   for (const product of local.products) {
-    const existing = sharedProducts.get(product.id);
-    if (existing) {
-      if ((product.updatedAt || product.createdAt || '') > (existing.updatedAt || existing.createdAt || '')) sharedProducts.set(product.id, product);
-      continue;
-    }
-    const productDate = product.updatedAt || product.createdAt || '';
-    if ((sharedDeletes.get(product.barcode) || '') >= productDate) continue;
-    sharedProducts.set(product.id, product);
+    const existing = products.get(product.id);
+    if (!existing || (product.updatedAt || product.createdAt || '') > (existing.updatedAt || existing.createdAt || '')) products.set(product.id, product);
   }
-  return { products: [...sharedProducts.values()], activity };
+  const deletes = new Map();
+  for (const item of activity) {
+    if (item?.type !== 'deleted' || !item.barcode) continue;
+    const previous = deletes.get(item.barcode) || '';
+    if ((item.at || '') > previous) deletes.set(item.barcode, item.at || '');
+  }
+  const keptProducts = [...products.values()].filter(product => (deletes.get(product.barcode) || '') < (product.updatedAt || product.createdAt || ''));
+  return { products: keptProducts, activity };
 }
 
 export function createProduct(form, { id, lotId, now }) {

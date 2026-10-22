@@ -1,6 +1,6 @@
-export const MAX_PRODUCT_PHOTO_EDGE = 960;
+export const MAX_PRODUCT_PHOTO_EDGE = 800;
 export const MAX_PRODUCT_PHOTO_DISPLAY_LENGTH = 500_000;
-export const MAX_PRODUCT_PHOTO_UPLOAD_LENGTH = 220_000;
+export const MAX_PRODUCT_PHOTO_UPLOAD_LENGTH = 120_000;
 
 export function isDisplayableProductPhoto(photo) {
   return typeof photo === 'string' && photo.length > 0 && photo.length <= MAX_PRODUCT_PHOTO_DISPLAY_LENGTH;
@@ -36,6 +36,23 @@ export async function compressProductPhoto(file) {
   } finally {
     release();
   }
+}
+
+export async function compressStoredProductPhotos(database) {
+  const products = [];
+  for (const product of database?.products || []) {
+    let photo = product.photo;
+    if (typeof photo === 'string' && photo.startsWith('data:image/') && photo.length > MAX_PRODUCT_PHOTO_UPLOAD_LENGTH) {
+      try {
+        const response = await fetch(photo);
+        if (response.ok) photo = await compressProductPhoto(await response.blob());
+      } catch (error) {
+        console.warn('Could not reduce an existing product photo:', error);
+      }
+    }
+    products.push(photo === product.photo ? product : { ...product, photo });
+  }
+  return { ...database, products };
 }
 
 async function loadImage(file) {

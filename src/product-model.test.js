@@ -67,6 +67,13 @@ test('keeps a product saved locally when the shared backup is behind', () => {
   assert.deepEqual(merged.products, [localProduct]);
 });
 
+test('preserves products added independently on two devices', () => {
+  const first = { id: 'device-a', name: 'Gin', barcode: '111', size: '750ml', photo: 'data:image/png,a', createdAt: '2026-10-22T10:00:00.000Z', updatedAt: '2026-10-22T10:00:00.000Z', lots: [] };
+  const second = { id: 'device-b', name: 'Vodka', barcode: '222', size: '500ml', photo: 'data:image/png,b', createdAt: '2026-10-22T10:00:01.000Z', updatedAt: '2026-10-22T10:00:01.000Z', lots: [] };
+  const merged = mergeDatabases({ products: [first], activity: [] }, { products: [second], activity: [] });
+  assert.deepEqual(new Set(merged.products.map(product => product.id)), new Set(['device-a', 'device-b']));
+});
+
 test('uses the newest local edit while preserving a newer shared deletion', () => {
   const sharedProduct = { id: 'p1', name: 'Gin', barcode: '123', size: '500ml', photo: 'data:image/png,x', createdAt: '2026-10-20T10:00:00.000Z', updatedAt: '2026-10-20T10:00:00.000Z', lots: [] };
   const localEdit = { ...sharedProduct, name: 'Gin Reserve', updatedAt: '2026-10-22T10:00:00.000Z' };

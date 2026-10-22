@@ -1,11 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compressProductPhoto, isDisplayableProductPhoto, MAX_PRODUCT_PHOTO_EDGE, MAX_PRODUCT_PHOTO_DISPLAY_LENGTH, MAX_PRODUCT_PHOTO_UPLOAD_LENGTH } from './photo-utils.js';
+import { compressProductPhoto, compressStoredProductPhotos, isDisplayableProductPhoto, MAX_PRODUCT_PHOTO_EDGE, MAX_PRODUCT_PHOTO_DISPLAY_LENGTH, MAX_PRODUCT_PHOTO_UPLOAD_LENGTH } from './photo-utils.js';
 
 test('keeps oversized legacy photos out of the mobile render tree', () => {
   assert.equal(isDisplayableProductPhoto('data:image/jpeg;base64,small'), true);
   assert.equal(isDisplayableProductPhoto('x'.repeat(MAX_PRODUCT_PHOTO_DISPLAY_LENGTH + 1)), false);
   assert.equal(isDisplayableProductPhoto(''), false);
+});
+
+test('leaves already-small saved photos unchanged during migration', async () => {
+  const product = { id: 'p1', photo: 'data:image/jpeg;base64,small' };
+  const database = { products: [product], activity: [] };
+  assert.deepEqual(await compressStoredProductPhotos(database), database);
 });
 
 test('compresses large photos to a mobile-friendly maximum edge', async () => {
