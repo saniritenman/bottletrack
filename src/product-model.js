@@ -42,7 +42,7 @@ export function mergeDatabases(localValue, sharedValue) {
     const previous = deletes.get(item.barcode) || '';
     if ((item.at || '') > previous) deletes.set(item.barcode, item.at || '');
   }
-  const keptProducts = [...products.values()].filter(product => (deletes.get(product.barcode) || '') < (product.updatedAt || product.createdAt || ''));
+  const keptProducts = [...products.values()].filter(product => !deletes.has(product.barcode) || deletes.get(product.barcode) < (product.updatedAt || product.createdAt || ''));
   return { products: keptProducts, activity };
 }
 

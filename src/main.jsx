@@ -10,6 +10,7 @@ import './styles.css';
 import { createProduct, mergeDatabases, normalizeDatabase, updateProduct } from './product-model.js';
 import { fetchSharedDatabase, fetchSharedDatabaseVersion, initializeSharedDatabase, saveSharedDatabase, sharedStorageEnabled } from './shared-storage.js';
 import { compressProductPhoto, compressStoredProductPhotos, isDisplayableProductPhoto } from './photo-utils.js';
+import { startSyncRefresh } from './sync-refresh.js';
 
 const STORAGE_KEY = 'bottletrack.data.v1';
 const LANG_KEY = 'bottletrack.lang';
@@ -169,7 +170,7 @@ function App(){
   const [cameraOn,setCameraOn]=useState(false);
   const [form,setForm]=useState(null);
   const [lotForm,setLotForm]=useState({expiry:''});
-  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), lastSyncedJson=useRef(null), lastSharedUpdatedAt=useRef(null), pendingLocalWrite=useRef(false), pollInFlight=useRef(false), dbRef=useRef(db);
+  const videoRef=useRef(null), scannerControlsRef=useRef(null), fileRef=useRef(null), importRef=useRef(null), scanLoop=useRef(false), lastSyncedJson=useRef(null), lastSharedUpdatedAt=useRef(null), pendingLocalWrite=useRef(false), dbRef=useRef(db);
   dbRef.current=db;
   const t=messages[lang]||messages.en, rtl=lang==='he';
   async function persistSharedDatabase(initialData){
@@ -250,7 +251,9 @@ function App(){
     const payload=JSON.stringify(db);
     if(payload===lastSyncedJson.current)return;
     pendingLocalWrite.current=true;
+    let started=false;
     const timer=setTimeout(async()=>{
+      started=true;
       try{
         const saved=await persistSharedDatabase(db);
         lastSharedUpdatedAt.current=saved.updatedAt;
@@ -260,26 +263,26 @@ function App(){
       }
       catch{pendingLocalWrite.current=false;setSyncStatus('error');window.setTimeout(()=>setSyncRetry(value=>value+1),3000)}
     },syncStatus==='error'?3000:250);
-    return()=>{clearTimeout(timer);pendingLocalWrite.current=false};
+    return()=>{clearTimeout(timer);if(!started)pendingLocalWrite.current=false};
   },[db,syncReady,photoMigrationReady,syncStatus,syncRetry]);
   useEffect(()=>{
-    if(!sharedStorageEnabled||!syncReady||syncStatus!=='shared')return;
-    const timer=setInterval(async()=>{
-      if(pendingLocalWrite.current||pollInFlight.current||document.hidden)return;
-      pollInFlight.current=true;
-      try{
+    if(!sharedStorageEnabled||!syncReady)return;
+    return startSyncRefresh(async isActive=>{
+      if(pendingLocalWrite.current)return;
         const version=await fetchSharedDatabaseVersion();
-        if(!version||version===lastSharedUpdatedAt.current)return;
-        const row=await fetchSharedDatabase();
-        if(!row?.data)return;
+        if(!isActive()||pendingLocalWrite.current)return;
+        if(version&&version===lastSharedUpdatedAt.current){setSyncStatus('shared');setSyncRetry(value=>value+1);return;}
+        let row=await fetchSharedDatabase();
+        if(!row){await initializeSharedDatabase(dbRef.current);row=await fetchSharedDatabase();}
+        if(!row?.data||!Array.isArray(row.data.products))throw new Error('Shared inventory is unavailable.');
+        if(!isActive()||pendingLocalWrite.current)return;
         lastSharedUpdatedAt.current=row.updated_at||version;
         const payload=JSON.stringify(row.data);
         if(payload!==lastSyncedJson.current){lastSyncedJson.current=payload;const normalized=normalizeDatabase(row.data);setDb(current=>JSON.stringify(current)===JSON.stringify(normalized)?current:mergeDatabases(current,normalized))}
-      }catch{setSyncStatus('error')}
-      finally{pollInFlight.current=false}
-    },2000);
-    return()=>clearInterval(timer);
-  },[syncReady,syncStatus]);
+        setSyncStatus('shared');
+        setSyncRetry(value=>value+1);
+    },()=>setSyncStatus('error'));
+  },[syncReady]);
   const products=db.products;
   const enriched=useMemo(()=>products.map(p=>({...p,sortedLots:[...(p.lots||[])].sort((a,b)=>a.expiry.localeCompare(b.expiry)),nextLot:[...(p.lots||[])].filter(x=>x.expiry).sort((a,b)=>a.expiry.localeCompare(b.expiry)).find(x=>x.expiry>=today())||[...(p.lots||[])].filter(x=>x.expiry).sort((a,b)=>a.expiry.localeCompare(b.expiry))[0]})),[products]);
   const filtered=enriched.filter(p=>{

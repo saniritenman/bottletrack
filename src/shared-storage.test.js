@@ -1,5 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { requestSharedJson } from './shared-storage.js';
+
+test('initialization accepts a successful empty response from Supabase', async () => {
+  const { initializeSharedDatabase } = await import('./shared-storage.js');
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, status: 201, json: async () => { throw new Error('Empty body'); } });
+  try {
+    await initializeSharedDatabase({ products: [], activity: [] });
+  } finally { globalThis.fetch = previousFetch; }
+});
+
+test('a stalled mobile request times out and a later retry can succeed without cached data', async () => {
+  const previousFetch = globalThis.fetch;
+  let attempt = 0;
+  globalThis.fetch = async (url, options) => {
+    assert.equal(options.cache, 'no-store');
+    if (++attempt === 1) return new Promise((resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(new Error('Request aborted')), { once: true });
+    });
+    return { ok: true, status: 200, json: async () => [{ updated_at: 'new-version' }] };
+  };
+  try {
+    await assert.rejects(requestSharedJson('select=updated_at', {}, 10), /aborted/);
+    assert.deepEqual(await requestSharedJson('select=updated_at'), [{ updated_at: 'new-version' }]);
+  } finally { globalThis.fetch = previousFetch; }
+});
 
 test('checks the small shared-inventory version without downloading product photos', async () => {
   const { fetchSharedDatabaseVersion } = await import('./shared-storage.js');

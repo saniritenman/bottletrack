@@ -4,6 +4,12 @@ import { createProduct, mergeDatabases, normalizeDatabase, updateProduct } from 
 
 const deps = { id: () => 'product-1', lotId: () => 'lot-1', now: () => '2026-10-20T10:00:00.000Z' };
 
+test('sync preserves older saved products without creation timestamps', () => {
+  const merged = mergeDatabases({ products: [{ id: 'legacy', name: 'Gin', barcode: '123' }] }, { products: [] });
+  assert.equal(merged.products.length, 1);
+  assert.equal(merged.products[0].id, 'legacy');
+});
+
 test('creates a product with required fields', () => {
   const product = createProduct({ name: '  Gin  ', barcode: ' 123 ', size: '750ml', expiry: '2027-02-01', photo: 'data:image/jpeg,x' }, deps);
   assert.equal(product.name, 'Gin');
