@@ -1,6 +1,7 @@
-export const MAX_PRODUCT_PHOTO_EDGE = 800;
+export const MAX_PRODUCT_PHOTO_EDGE = 480;
 export const MAX_PRODUCT_PHOTO_DISPLAY_LENGTH = 500_000;
-export const MAX_PRODUCT_PHOTO_UPLOAD_LENGTH = 120_000;
+// Includes base64 overhead: about 30 KB of JPEG becomes at most 40 KB to upload.
+export const MAX_PRODUCT_PHOTO_UPLOAD_LENGTH = 40_000;
 
 export function isDisplayableProductPhoto(photo) {
   return typeof photo === 'string' && photo.length > 0 && photo.length <= MAX_PRODUCT_PHOTO_DISPLAY_LENGTH;
@@ -19,7 +20,7 @@ export async function compressProductPhoto(file) {
     if (!context) throw new Error('Could not prepare this image.');
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-    for (const quality of [0.78, 0.64, 0.5, 0.38]) {
+    for (const quality of [0.48, 0.38, 0.28, 0.2, 0.16]) {
       const blob = await new Promise((resolve, reject) => {
         canvas.toBlob(result => result ? resolve(result) : reject(new Error('Could not resize this image.')), 'image/jpeg', quality);
       });

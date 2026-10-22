@@ -83,14 +83,14 @@ test('falls back to an image element when createImageBitmap is unavailable', asy
   }
 });
 
-test('recompresses photos until their stored data fits the display limit', async () => {
+test('recompresses photos until their stored data fits the weak-connection upload limit', async () => {
   const previous = { createImageBitmap: globalThis.createImageBitmap, document: globalThis.document, FileReader: globalThis.FileReader };
   let encodes = 0;
   globalThis.createImageBitmap = async () => ({ width: 2400, height: 1600, close() {} });
   globalThis.document = {
     createElement: () => ({ width: 0, height: 0, getContext: () => ({ drawImage: () => {} }), toBlob: callback => {
       encodes += 1;
-      callback(new Blob([new Uint8Array(encodes === 1 ? 500_000 : 100_000)], { type: 'image/jpeg' }));
+      callback(new Blob([new Uint8Array(encodes === 1 ? MAX_PRODUCT_PHOTO_UPLOAD_LENGTH * 2 : MAX_PRODUCT_PHOTO_UPLOAD_LENGTH / 2)], { type: 'image/jpeg' }));
     } }),
   };
   globalThis.FileReader = class { readAsDataURL(blob) { this.result = `data:image/jpeg;base64,${'x'.repeat(blob.size)}`; this.onload(); } };
@@ -103,6 +103,30 @@ test('recompresses photos until their stored data fits the display limit', async
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete globalThis[key];
       else globalThis[key] = value;
+    }
+  }
+});
+
+test('downgrades older stored photos once and keeps product data intact', async () => {
+  const previous = { createImageBitmap: globalThis.createImageBitmap, document: globalThis.document, FileReader: globalThis.FileReader, fetch: globalThis.fetch };
+  let reads = 0;
+  globalThis.fetch = async () => { reads++; return { ok: true, blob: async () => new Blob(['old photo'], { type: 'image/jpeg' }) }; };
+  globalThis.createImageBitmap = async () => ({ width: 800, height: 600, close() {} });
+  globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ({ drawImage() {} }), toBlob: callback => callback(new Blob(['small'], { type: 'image/jpeg' })) }) };
+  globalThis.FileReader = class { readAsDataURL() { this.result = 'data:image/jpeg;base64,small'; this.onload(); } };
+  const original = { products: [{ id: 'p1', name: 'Gin', lots: [{ expiry: '2027-01-01' }], photo: `data:image/jpeg;base64,${'x'.repeat(120_000)}` }], deletedProducts: { old: '2026-10-22T10:00:00.000Z' }, activity: [] };
+  try {
+    const compacted = await compressStoredProductPhotos(original);
+    assert.ok(compacted.products[0].photo.length <= 40_000);
+    assert.deepEqual(compacted.products[0].lots, original.products[0].lots);
+    assert.equal(compacted.products[0].id, 'p1');
+    assert.deepEqual(compacted.deletedProducts, original.deletedProducts);
+    assert.deepEqual(await compressStoredProductPhotos(compacted), compacted);
+    assert.equal(reads, 1);
+    assert.notEqual(original.products[0].photo, compacted.products[0].photo);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete globalThis[key]; else globalThis[key] = value;
     }
   }
 });
