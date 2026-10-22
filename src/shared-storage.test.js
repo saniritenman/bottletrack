@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { requestSharedJson } from './shared-storage.js';
+import { requestSharedJson, createSharedStorage } from './shared-storage.js';
+
+test('legacy anon JWT and new publishable keys use the correct authentication headers', async () => {
+  for (const key of ['eyJ.test.signature', 'sb_publishable_test']) {
+    const api = createSharedStorage({ url: 'https://example.test', key, fetchRequest: async (url, options) => {
+      assert.equal(options.headers.apikey, key);
+      assert.equal(options.headers.Authorization, key.startsWith('eyJ') ? `Bearer ${key}` : undefined);
+      return { ok: true, status: 200, json: async () => [] };
+    } });
+    await api.fetchSharedDatabase();
+    await assert.rejects(api.saveSharedDatabase({ products: [] }), /version is required/);
+  }
+});
 
 test('initialization accepts a successful empty response from Supabase', async () => {
   const { initializeSharedDatabase } = await import('./shared-storage.js');

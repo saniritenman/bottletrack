@@ -297,3 +297,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 /* Keep the sync retry control consistent with the status indicator. */
 button.sync-indicator{font:inherit;cursor:pointer}
 button.sync-indicator:focus-visible{outline:2px solid #4b91db;outline-offset:3px}
+
+.update-notice{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 16px;background:#e6f0ff;color:#143f73;font-size:13px}
+:root[data-theme="dark"] .update-notice{background:#203650;color:#e1edff}

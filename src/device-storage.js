@@ -13,11 +13,17 @@ function openDatabase() {
   if (!opening) opening = new Promise((resolve, reject) => {
     if (!globalThis.indexedDB) { reject(new Error('Device database unavailable')); return; }
     const request = indexedDB.open('bottletrack-device', 1);
-    const timer = setTimeout(() => reject(new Error('Device database timed out')), 5000);
+    let expired = false;
+    const timer = setTimeout(() => { expired = true; reject(new Error('Device database timed out')); }, 5000);
     request.onupgradeneeded = () => request.result.createObjectStore('inventory');
     request.onerror = () => { clearTimeout(timer); reject(request.error); };
-    request.onblocked = () => { clearTimeout(timer); reject(new Error('Device database blocked')); };
-    request.onsuccess = () => { clearTimeout(timer); resolve(request.result); };
+    request.onblocked = () => { expired = true; clearTimeout(timer); reject(new Error('Device database blocked')); };
+    request.onsuccess = () => {
+      clearTimeout(timer);
+      if (expired) { request.result.close(); return; }
+      request.result.onversionchange = () => { request.result.close(); opening = null; };
+      resolve(request.result);
+    };
   }).catch(error => { opening = null; throw error; });
   return opening;
 }

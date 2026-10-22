@@ -67,7 +67,7 @@ export function replaceInventory(database, backup, stamp = nextChangeStamp(datab
     const deletedLots = newest(stamps(previous?.deletedLots), stamps(product.deletedLots));
     for (const lot of previous?.lots || []) if (!product.lots.some(item => (item.id || item.expiry) === (lot.id || lot.expiry))) deletedLots[lot.id || lot.expiry] = stamp;
     for (const lot of product.lots) delete deletedLots[lot.id || lot.expiry];
-    return { ...product, updatedAt: stamp, deletedLots };
+    return { ...product, lots: product.lots.map(lot => ({ ...lot, updatedAt: stamp })), updatedAt: stamp, deletedLots };
   });
   return { ...incoming, products, deletedProducts };
 }
@@ -85,8 +85,13 @@ export function mergeDatabases(localValue, sharedValue) {
     if (!existing) { products.set(product.id, product); continue; }
     const winner = productStamp(product) > productStamp(existing) ? product : existing;
     const deletedLots = newest(stamps(existing.deletedLots), stamps(product.deletedLots));
-    const lots = new Map([...existing.lots, ...product.lots].map(lot => [lot.id || lot.expiry, lot]));
-    const merged = { ...winner, lots: [...lots.values()].filter(lot => !deletedLots[lot.id || lot.expiry]) };
+    const lots = new Map();
+    for (const lot of [...existing.lots, ...product.lots]) {
+      const key = lot.id || lot.expiry;
+      const previous = lots.get(key);
+      if (!previous || (lot.updatedAt || lot.createdAt || '') > (previous.updatedAt || previous.createdAt || '')) lots.set(key, lot);
+    }
+    const merged = { ...winner, lots: [...lots.values()].filter(lot => !deletedLots[lot.id || lot.expiry] || deletedLots[lot.id || lot.expiry] < (lot.updatedAt || lot.createdAt || '')) };
     if (Object.keys(deletedLots).length) merged.deletedLots = deletedLots;
     products.set(product.id, merged);
   }

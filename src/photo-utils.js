@@ -7,7 +7,7 @@ export function isDisplayableProductPhoto(photo) {
 }
 
 export async function compressProductPhoto(file) {
-  if (!file?.type?.startsWith('image/')) throw new Error('Select an image file.');
+  if (!file || !(file.type?.startsWith('image/') || !file.type && /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name || ''))) throw new Error('Select an image file.');
 
   const { image, release } = await loadImage(file);
   try {

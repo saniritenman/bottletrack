@@ -1,8 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createProduct, mergeDatabases, normalizeDatabase, updateProduct } from './product-model.js';
+import { createProduct, mergeDatabases, normalizeDatabase, updateProduct, replaceInventory, removeExpiry } from './product-model.js';
 
 const deps = { id: () => 'product-1', lotId: () => 'lot-1', now: () => '2026-10-20T10:00:00.000Z' };
+
+test('invalid dates and malformed activity cannot crash the inventory', () => {
+  const complete = { name: 'Gin', barcode: '123', size: '750ml', photo: 'data:image/jpeg,x', expiry: '2027-02-30' };
+  assert.throws(() => createProduct(complete, deps), /invalid/i);
+  const merged = mergeDatabases({ products: [], activity: [null, 7, { at: 8 }] }, { products: [] });
+  assert.equal(merged.activity.length, 1);
+});
+
+test('importing a replacement backup does not bring removed products back on the next sync', () => {
+  const old = { products: [{ id: 'p1', name: 'Old', barcode: '123', createdAt: deps.now(), lots: [] }], activity: [] };
+  const replacement = replaceInventory(old, { products: [], activity: [] }, '2026-10-22T12:00:00.000Z');
+  assert.equal(mergeDatabases(replacement, old).products.length, 0);
+});
+
+test('restoring a backup can deliberately restore a previously deleted expiration date', () => {
+  const original = { products: [{ id: 'p1', name: 'Gin', barcode: '123', createdAt: deps.now(), lots: [{ id: 'lot1', expiry: '2027-01-01', createdAt: deps.now() }] }] };
+  const removed = removeExpiry(original, 'p1', original.products[0].lots[0], '2026-10-21T12:00:00.000Z');
+  const restored = replaceInventory(removed, original, '2026-10-22T12:00:00.000Z');
+  assert.equal(mergeDatabases(restored, removed).products[0].lots.length, 1);
+  assert.equal(mergeDatabases(original, mergeDatabases(restored, removed)).products[0].lots.length, 1);
+});
 
 test('sync preserves older saved products without creation timestamps', () => {
   const merged = mergeDatabases({ products: [{ id: 'legacy', name: 'Gin', barcode: '123' }] }, { products: [] });

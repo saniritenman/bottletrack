@@ -14,13 +14,14 @@ import { createInventorySync } from './inventory-sync.js';
 import { deviceStorage, readPreference, writePreference } from './device-storage.js';
 import { compressProductPhoto, compressStoredProductPhotos, isDisplayableProductPhoto } from './photo-utils.js';
 import { startSyncRefresh } from './sync-refresh.js';
+import { availableAppVersion } from './app-version.js';
 
 const LANG_KEY = 'bottletrack.lang';
 const THEME_KEY = 'bottletrack.theme';
 const today = () => { const date=new Date(); return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; };
 const messages = {
   en: {
-    app:'BottleTrack', syncRetryHint:'Tap to sync now', branchLabel:'Bana Mashkaot · Sderot Branch', photoProcessing:'Preparing photo…', tagline:'Your stock. In date. Under control.', overview:'Overview', inventory:'Inventory',
+    app:'BottleTrack', updateAvailable:'A new version is ready.', updateNow:'Update app', syncRetryHint:'Tap to sync now', branchLabel:'Bana Mashkaot · Sderot Branch', photoProcessing:'Preparing photo…', tagline:'Your stock. In date. Under control.', overview:'Overview', inventory:'Inventory',
     expiring:'Expiring soon', expired:'Expired', products:'Products', tracked:'Tracked products',
     search:'Search name or barcode…', sortBy:'Sort by', sortName:'Name (A–Z)', sortDate:'Expiration date', scan:'Scan barcode', add:'Add product', addLot:'Add expiry date',
     all:'All products', ok:'In date', soon:'Expiring soon', overdue:'Expired', noProducts:'No products yet',
@@ -58,7 +59,7 @@ const messages = {
     installApp:'Add to device', installHelpTitle:'Add BottleTrack to your device', installHelp:'On iPhone or iPad: tap Share, then choose “Add to Home Screen”. On Android: open your browser menu and choose “Install app” or “Add to Home screen”.', within30Days:'≤ 30 days'
   },
   he: {
-    app:'BottleTrack', syncRetryHint:'הקישו לסנכרון עכשיו', branchLabel:'בנה משקאות · סניף שדרות', photoProcessing:'מכינים את התמונה…', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
+    app:'BottleTrack', updateAvailable:'גרסה חדשה מוכנה.', updateNow:'עדכון האפליקציה', syncRetryHint:'הקישו לסנכרון עכשיו', branchLabel:'בנה משקאות · סניף שדרות', photoProcessing:'מכינים את התמונה…', tagline:'המלאי שלך. בתוקף. בשליטה.', overview:'סקירה כללית', inventory:'מלאי',
     expiring:'עומדים לפוג', expired:'פגי תוקף', products:'מוצרים', tracked:'מוצרים במעקב',
     search:'חיפוש לפי שם או ברקוד…', sortBy:'מיון לפי', sortName:'שם (א׳–ת׳)', sortDate:'תאריך תפוגה', scan:'סריקת ברקוד', add:'הוספת מוצר', addLot:'הוספת תאריך תפוגה',
     all:'כל המוצרים', ok:'בתוקף', soon:'עומדים לפוג', overdue:'פג תוקף', noProducts:'עדיין אין מוצרים',
@@ -96,7 +97,7 @@ const messages = {
     installApp:'הוספה למכשיר', installHelpTitle:'הוספת BottleTrack למכשיר', installHelp:'ב-iPhone או iPad: הקישו על שיתוף ואז על „הוספה למסך הבית”. ב-Android: פתחו את תפריט הדפדפן ובחרו „התקנת אפליקציה” או „הוספה למסך הבית”.', within30Days:'עד 30 יום'
   },
   ru: {
-    app:'BottleTrack', syncRetryHint:'Нажмите для синхронизации', branchLabel:'Bana Mashkaot · филиал Сдерот', photoProcessing:'Подготовка фото…', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
+    app:'BottleTrack', updateAvailable:'Доступна новая версия.', updateNow:'Обновить приложение', syncRetryHint:'Нажмите для синхронизации', branchLabel:'Bana Mashkaot · филиал Сдерот', photoProcessing:'Подготовка фото…', tagline:'Ваш запас. Сроки под контролем.', overview:'Обзор', inventory:'Склад',
     expiring:'Скоро истекает', expired:'Просрочено', products:'Товары', tracked:'Товаров отслеживается',
     search:'Поиск по названию или штрихкоду…', sortBy:'Сортировка', sortName:'Название (А–Я)', sortDate:'Срок годности', scan:'Сканировать штрихкод', add:'Добавить товар', addLot:'Добавить срок годности',
     all:'Все товары', ok:'В сроке', soon:'Скоро истекает', overdue:'Просрочено', noProducts:'Пока нет товаров',
@@ -160,6 +161,7 @@ function App(){
   const [storageError,setStorageError]=useState(false);
   const [deviceReady,setDeviceReady]=useState(false);
   const [syncErrorDetail,setSyncErrorDetail]=useState('');
+  const [availableBuild,setAvailableBuild]=useState(null);
   const [mobileMenu,setMobileMenu]=useState(false);
   const [installPrompt,setInstallPrompt]=useState(null);
   const [isInstalled,setIsInstalled]=useState(false);
@@ -177,16 +179,30 @@ function App(){
     setDatabase(next);
     localSaveRef.current=deviceStorage.save(next).then(saved=>{setStorageError(!saved);return saved});
   }
+  async function reduceStoredPhotos(isActive){
+    const original=dbRef.current;
+    const compacted=await compressStoredProductPhotos(original);
+    if(!isActive())return;
+    const originals=new Map(original.products.map(product=>[product.id,product.photo]));
+    const photos=new Map(compacted.products.map(product=>[product.id,product.photo]));
+    const stamp=nextChangeStamp(dbRef.current);
+    const products=dbRef.current.products.map(product=>product.photo===originals.get(product.id)&&photos.get(product.id)&&photos.get(product.id)!==product.photo?{...product,photo:photos.get(product.id),updatedAt:stamp}:product);
+    if(products.some((product,index)=>product!==dbRef.current.products[index]))setDb({...dbRef.current,products});
+  }
   const t=messages[lang]||messages.en, rtl=lang==='he';
   const SyncIndicator=({className=''})=>{
-    const state=storageError||syncStatus==='error'?'error':syncStatus==='loading'?'loading':syncStatus==='shared'?'shared':'local';
+    const state=syncStatus==='error'?'error':syncStatus==='loading'?'loading':syncStatus==='shared'?'shared':'local';
     const label=state==='error'?t.syncFailed:state==='loading'?t.syncSaving:state==='shared'?t.syncSynced:t.syncLocal;
     const Icon=state==='error'||state==='local'?CloudOff:state==='loading'?LoaderCircle:Cloud;
     return <button type="button" className={`sync-indicator sync-indicator-${state} ${className}`} onClick={()=>{void syncRef.current?.refresh()}} aria-label={`${t.syncLabel}: ${label}. ${t.syncRetryHint}`} title={`${t.syncLabel}: ${label}${syncErrorDetail?' — '+syncErrorDetail:''}. ${t.syncRetryHint}`}><Icon size={17}/><span className="storage-label" aria-live="polite">{label}</span></button>;
   };
   useEffect(()=>{
     let active=true;
-    deviceStorage.readLarge().then(cached=>{if(active)setDb(mergeDatabases(dbRef.current,cached))}).finally(()=>{if(active)setDeviceReady(true)});
+    deviceStorage.readLarge().then(async cached=>{
+      if(!active)return;
+      setDb(mergeDatabases(dbRef.current,cached));
+      await reduceStoredPhotos(()=>active);
+    }).catch(error=>console.error('Could not prepare the device backup:',error)).finally(()=>{if(active)setDeviceReady(true)});
     return()=>{active=false};
   },[]);
   useEffect(()=>{writePreference(LANG_KEY,lang); document.documentElement.lang=lang;document.documentElement.dir=rtl?'rtl':'ltr';},[lang,rtl]);
@@ -216,19 +232,21 @@ function App(){
       const synced=await controller.refresh();
       if(!active||!synced||migrated)return;
       migrated=true;
-      const original=dbRef.current;
-      const compacted=await compressStoredProductPhotos(original);
-      if(!active)return;
-      const originals=new Map(original.products.map(product=>[product.id,product.photo]));
-      const photos=new Map(compacted.products.map(product=>[product.id,product.photo]));
-      const stamp=nextChangeStamp(dbRef.current);
-      const products=dbRef.current.products.map(product=>product.photo===originals.get(product.id)&&photos.get(product.id)&&photos.get(product.id)!==product.photo?{...product,photo:photos.get(product.id),updatedAt:stamp}:product);
-      if(products.some((product,index)=>product!==dbRef.current.products[index]))setDb({...dbRef.current,products});
+      await reduceStoredPhotos(()=>active);
     };
     const stop=startSyncRefresh(refresh,error=>{console.error('Inventory refresh failed:',error);if(active)setSyncStatus('error')});
     return()=>{active=false;stop();controller.stop();syncRef.current=null};
   },[deviceReady]);
   useEffect(()=>{if(deviceReady)void syncRef.current?.localChanged()},[db,deviceReady]);
+  useEffect(()=>{
+    if(!import.meta.env.PROD)return;
+    let active=true;
+    const stop=startSyncRefresh(async()=>{
+      const build=await availableAppVersion(import.meta.env.VITE_APP_BUILD,document.baseURI);
+      if(active&&build)setAvailableBuild(build);
+    },()=>{},{intervalMs:60000});
+    return()=>{active=false;stop()};
+  },[]);
   const products=db.products;
   const enriched=useMemo(()=>products.map(p=>({...p,sortedLots:[...(p.lots||[])].sort((a,b)=>a.expiry.localeCompare(b.expiry)),nextLot:[...(p.lots||[])].filter(x=>x.expiry).sort((a,b)=>a.expiry.localeCompare(b.expiry)).find(x=>x.expiry>=today())||[...(p.lots||[])].filter(x=>x.expiry).sort((a,b)=>a.expiry.localeCompare(b.expiry))[0]})),[products]);
   const filtered=enriched.filter(p=>{
@@ -273,7 +291,8 @@ function App(){
       const angles=[0,45,90,135];
       let angleIndex=0;
       const scanFrame=()=>{
-        if(!scanLoop.current||!video.videoWidth)return;
+        if(!scanLoop.current)return;
+        if(!video.videoWidth){scanTimer=window.setTimeout(scanFrame,100);return;}
         const scale=Math.min(1,960/Math.max(video.videoWidth,video.videoHeight));
         const width=Math.round(video.videoWidth*scale),height=Math.round(video.videoHeight*scale);
         const angle=angles[angleIndex++%angles.length]*Math.PI/180;
@@ -281,6 +300,7 @@ function App(){
         canvas.width=Math.ceil(width*cos+height*sin);
         canvas.height=Math.ceil(width*sin+height*cos);
         const context=canvas.getContext('2d');
+        if(!context){setScanError(t.cameraError);stopCamera();return;}
         context.translate(canvas.width/2,canvas.height/2);
         context.rotate(angle);
         context.drawImage(video,-width/2,-height/2,width,height);
@@ -366,6 +386,7 @@ function App(){
     </aside>
     {mobileMenu&&<button type="button" className="sidebar-scrim" onClick={()=>setMobileMenu(false)} aria-label={t.close}/>}
     <main className="main">
+      {availableBuild&&!modal&&!savingProduct&&<div className="update-notice" role="status"><span>{t.updateAvailable}</span><button type="button" className="button secondary" onClick={()=>{const url=new URL(window.location.href);url.searchParams.set('appVersion',availableBuild);window.location.replace(url.href)}}>{t.updateNow}</button></div>}
       <header className="topbar"><div className="topbar-context"><SyncIndicator className="mobile-sync"/><button className="icon-btn mobile-toggle" onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"><Menu/></button><div className="breadcrumb">{t.productCatalog}<span>/</span><b>{view==='detail'?selectedProduct?.name||t.details:view==='inventory'?t.inventory:t.expirySummary}</b></div></div><button type="button" className="topbar-home" onClick={goHome} aria-label={`${t.app} — ${t.inventory}`} title={t.inventory}><span className="brand-mark"><img src="./bottletrack-icon.svg" alt=""/></span><span className="topbar-brand-text"><strong>{t.app}</strong></span></button><div className="top-actions"><SyncIndicator className="desktop-sync"/>{!isInstalled&&<button className="button secondary install-button" onClick={addToDevice} aria-label={t.installApp} title={t.installApp}><Download size={16}/><span>{t.installApp}</span></button>}<button className="button primary top-add" onClick={openNew}><Plus size={17}/>{t.add}</button></div></header>
       {view==='detail'&&selectedProduct ? <section className="content detail-content">
         <button className="back-link" onClick={goInventory}>← {t.back}</button>
