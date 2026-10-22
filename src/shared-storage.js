@@ -1,41 +1,44 @@
 const env = import.meta.env || {};
-const endpoint = (env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-const publicKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY || '';
-
-export const sharedStorageEnabled = Boolean(endpoint && publicKey);
+export function createSharedStorage({ url = '', key = '', fetchRequest = (...args) => fetch(...args) } = {}) {
+const endpoint = url.trim().replace(/\/$/, '');
+const publicKey = key.trim();
 
 function requestHeaders(extra = {}) {
-  return { apikey: publicKey, 'Content-Type': 'application/json', ...extra };
+  return { apikey: publicKey, ...(publicKey.startsWith('eyJ') ? { Authorization: `Bearer ${publicKey}` } : {}), 'Content-Type': 'application/json', ...extra };
 }
 
-export async function requestSharedJson(path, options = {}, timeoutMs = options.method ? 60000 : 15000) {
+async function requestSharedJson(path, options = {}, timeoutMs = options.method ? 60000 : 15000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(`${endpoint}/rest/v1/bottletrack_state?${path}`, {
+    const response = await fetchRequest(`${endpoint}/rest/v1/bottletrack_state?${path}`, {
       ...options,
       cache: 'no-store',
       signal: controller.signal,
       headers: requestHeaders(options.headers),
     });
-    if (!response.ok) throw new Error(`Shared inventory request failed (${response.status}).`);
+    if (!response.ok) {
+      const error = new Error(`Shared inventory request failed (${response.status}).`);
+      error.status = response.status;
+      throw error;
+    }
     return response.status === 204 || options.headers?.Prefer?.includes('return=minimal') ? null : await response.json();
   } finally {
     clearTimeout(timer);
   }
 }
 
-export async function fetchSharedDatabase() {
+async function fetchSharedDatabase() {
   const rows = await requestSharedJson('id=eq.1&select=data,updated_at');
   return rows[0] || null;
 }
 
-export async function fetchSharedDatabaseVersion() {
+async function fetchSharedDatabaseVersion() {
   const rows = await requestSharedJson('id=eq.1&select=updated_at');
   return rows[0]?.updated_at || null;
 }
 
-export async function initializeSharedDatabase(data) {
+async function initializeSharedDatabase(data) {
   await requestSharedJson('on_conflict=id', {
     method: 'POST',
     headers: requestHeaders({ Prefer: 'resolution=ignore-duplicates,return=minimal' }),
@@ -43,7 +46,8 @@ export async function initializeSharedDatabase(data) {
   });
 }
 
-export async function saveSharedDatabase(data, expectedUpdatedAt) {
+async function saveSharedDatabase(data, expectedUpdatedAt) {
+  if (!expectedUpdatedAt) throw new Error('A server version is required to save the inventory safely.');
   const conditional = Boolean(expectedUpdatedAt);
   const query = conditional
     ? `id=eq.1&updated_at=eq.${encodeURIComponent(expectedUpdatedAt)}&select=updated_at`
@@ -55,3 +59,10 @@ export async function saveSharedDatabase(data, expectedUpdatedAt) {
   });
   return rows[0]?.updated_at ? { saved: true, updatedAt: rows[0].updated_at } : { saved: false, updatedAt: null };
 }
+
+return { requestSharedJson, fetchSharedDatabase, fetchSharedDatabaseVersion, initializeSharedDatabase, saveSharedDatabase };
+}
+const url = env.VITE_SUPABASE_URL || '';
+const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY || '';
+export const sharedStorageEnabled = Boolean(url.trim() && key.trim());
+export const { requestSharedJson, fetchSharedDatabase, fetchSharedDatabaseVersion, initializeSharedDatabase, saveSharedDatabase } = createSharedStorage({ url, key });
